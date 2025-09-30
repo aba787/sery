@@ -10,34 +10,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/1.30.1/date_fns.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>✨ نظام إدارة الأعمال والتحليلات المتقدم</h1>
-            <p style="text-align: center; color: rgba(255,255,255,0.7); margin-bottom: 20px; font-size: 18px;">تحقيق الأهداف من خلال البيانات الذكية</p>
-            <nav>
-                <button onclick="showSection('dashboard')" class="nav-btn active">لوحة التحكم</button>
-                <button onclick="showSection('add-transaction')" class="nav-btn">إضافة معاملة</button>
-                <button onclick="showSection('transactions')" class="nav-btn">المعاملات</button>
-                <button onclick="showSection('reports')" class="nav-btn">التقارير</button>
-            </nav>
-        </header>
+    <div class="app-layout">
+        <!-- Main Content -->
+        <div class="main-content">
+            <header>
+                <h1>✨ نظام إدارة الأعمال والتحليلات المتقدم</h1>
+                <p style="text-align: center; color: rgba(255,255,255,0.7); margin-bottom: 20px; font-size: 18px;">تحقيق الأهداف من خلال البيانات الذكية</p>
+                <nav>
+                    <button onclick="showSection('dashboard')" class="nav-btn active">لوحة التحكم</button>
+                    <button onclick="showSection('add-transaction')" class="nav-btn">إضافة معاملة</button>
+                    <button onclick="showSection('transactions')" class="nav-btn">المعاملات</button>
+                    <button onclick="showSection('reports')" class="nav-btn">التقارير</button>
+                </nav>
+            </header>
 
         <!-- Dashboard Section -->
         <section id="dashboard" class="section active">
-            <h2>لوحة التحكم الرئيسية</h2>
-            
-            <!-- Projects Section -->
-            <div class="projects-section">
-                <div class="section-header">
-                    <h3>مشاريعي</h3>
-                    <button onclick="openAddProjectModal()" class="add-project-btn">
-                        <span>+</span> إضافة مشروع جديد
-                    </button>
-                </div>
-                <div id="projects-grid" class="projects-grid">
-                    <!-- Projects will be populated dynamically -->
-                </div>
-            </div>
+            <h2 id="dashboard-title">لوحة التحكم العامة</h2>
             
             <!-- KPI Cards -->
             <div class="kpi-grid">
@@ -269,6 +258,23 @@
                 <!-- Generated report will appear here -->
             </div>
         </section>
+    </div>
+        
+        <!-- Projects Sidebar -->
+        <div class="projects-sidebar">
+            <div class="sidebar-header">
+                <h3>مشاريعي</h3>
+                <button onclick="openAddProjectModal()" class="add-project-btn-small">
+                    <span>+</span>
+                </button>
+            </div>
+            <div class="sidebar-projects" id="sidebar-projects">
+                <!-- Projects will be populated dynamically -->
+            </div>
+            <button onclick="showAllProjects()" class="show-all-btn">
+                عرض جميع المشاريع
+            </button>
+        </div>
     </div>
 
     <!-- Add Project Modal -->

@@ -29,11 +29,32 @@ body::before {
     z-index: -1;
 }
 
-.container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 20px;
+.app-layout {
+    display: flex;
+    min-height: 100vh;
     position: relative;
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+    padding-right: 320px; /* Make space for sidebar */
+    max-width: none;
+}
+
+.projects-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100vh;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+    backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px 20px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: -5px 0 30px rgba(0, 0, 0, 0.3);
 }
 
 header {
@@ -548,9 +569,32 @@ table tr:hover {
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+    .main-content {
+        padding-right: 280px;
+    }
+    
+    .projects-sidebar {
+        width: 260px;
+    }
+}
+
 @media (max-width: 768px) {
-    .container {
+    .app-layout {
+        flex-direction: column;
+    }
+    
+    .main-content {
         padding: 15px;
+        padding-right: 15px;
+    }
+    
+    .projects-sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        order: -1;
+        padding: 20px 15px;
     }
     
     header h1 {
@@ -584,21 +628,19 @@ table tr:hover {
     }
 }
 
-/* Projects Section */
-.projects-section {
-    margin-bottom: 40px;
-}
-
-.section-header {
+/* Sidebar Styles */
+.sidebar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.section-header h3 {
+.sidebar-header h3 {
     color: #ffffff;
-    font-size: 1.8em;
+    font-size: 1.4em;
     font-weight: 600;
     background: linear-gradient(135deg, #ffffff, #a78bfa);
     -webkit-background-clip: text;
@@ -606,29 +648,114 @@ table tr:hover {
     background-clip: text;
 }
 
-.add-project-btn {
-    padding: 12px 24px;
+.add-project-btn-small {
+    width: 35px;
+    height: 35px;
     background: linear-gradient(135deg, #10b981, #059669);
     color: white;
     border: none;
-    border-radius: 50px;
-    font-weight: 600;
+    border-radius: 50%;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
 }
 
-.add-project-btn:hover {
+.add-project-btn-small:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
 }
 
-.add-project-btn span {
-    font-size: 20px;
-    font-weight: 700;
+.add-project-btn-small span {
+    font-size: 18px;
+}
+
+.sidebar-projects {
+    margin-bottom: 25px;
+}
+
+.sidebar-project {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-project::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--project-color);
+}
+
+.sidebar-project:hover {
+    transform: translateX(-5px);
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.3),
+        0 0 20px var(--project-color-transparent);
+}
+
+.sidebar-project.active {
+    background: linear-gradient(135deg, var(--project-color-transparent), rgba(255, 255, 255, 0.1));
+    transform: translateX(-5px);
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.3),
+        0 0 20px var(--project-color-transparent);
+}
+
+.sidebar-project-name {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.sidebar-project-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-project-revenue {
+    color: var(--project-color);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.sidebar-project-count {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+}
+
+.show-all-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(6, 182, 212, 0.2));
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.show-all-btn:hover {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.3), rgba(6, 182, 212, 0.3));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(167, 139, 250, 0.3);
 }
 
 .projects-grid {

@@ -5,6 +5,7 @@ let monthlyAggregates = [];
 let forecastData = {};
 let projects = [];
 let selectedProject = null;
+let isShowingAllProjects = true;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -284,69 +285,42 @@ function loadProjects() {
         projects = JSON.parse(localStorage.getItem('projects'));
     }
     
-    displayProjects();
+    displaySidebarProjects();
     updateBusinessOptions();
 }
 
-// Display projects in grid
-function displayProjects() {
-    const projectsGrid = document.getElementById('projects-grid');
-    projectsGrid.innerHTML = '';
+// Display projects in sidebar
+function displaySidebarProjects() {
+    const sidebarProjects = document.getElementById('sidebar-projects');
+    sidebarProjects.innerHTML = '';
     
     projects.forEach(project => {
         // Calculate project stats
-        const projectTransactions = currentTransactions.filter(t => t.businessId === project.id);
         const projectAggregates = monthlyAggregates.filter(agg => agg.businessId === project.id);
-        
         const totalRevenue = projectAggregates.reduce((sum, agg) => sum + agg.total_revenue, 0);
-        const totalProfit = projectAggregates.reduce((sum, agg) => sum + agg.net_profit, 0);
-        const totalStudents = projectAggregates.reduce((sum, agg) => sum + agg.students_count, 0);
-        const totalClients = projectAggregates.reduce((sum, agg) => sum + (agg.clients_count || 0), 0);
+        const totalTransactions = currentTransactions.filter(t => t.businessId === project.id).length;
         
-        const projectCard = document.createElement('div');
-        projectCard.className = 'project-card';
-        projectCard.style.setProperty('--project-color', project.color);
-        projectCard.style.setProperty('--project-color-transparent', project.color + '30');
+        const projectElement = document.createElement('div');
+        projectElement.className = 'sidebar-project';
+        if (selectedProject === project.id) {
+            projectElement.classList.add('active');
+        }
+        projectElement.style.setProperty('--project-color', project.color);
+        projectElement.style.setProperty('--project-color-transparent', project.color + '40');
         
-        projectCard.innerHTML = `
-            <div class="project-header">
-                <div class="project-info">
-                    <h4>${project.name}</h4>
-                    <p>${project.description}</p>
-                </div>
-                <div class="project-actions">
-                    <button class="edit-project-btn" onclick="editProject('${project.id}')">تعديل</button>
-                    <button class="delete-project-btn" onclick="deleteProject('${project.id}')">حذف</button>
-                </div>
-            </div>
-            <div class="project-stats">
-                <div class="project-stat">
-                    <div class="project-stat-value">${formatCurrency(totalRevenue)}</div>
-                    <div class="project-stat-label">الإيرادات</div>
-                </div>
-                <div class="project-stat">
-                    <div class="project-stat-value">${formatCurrency(totalProfit)}</div>
-                    <div class="project-stat-label">الأرباح</div>
-                </div>
-                <div class="project-stat">
-                    <div class="project-stat-value">${totalStudents}</div>
-                    <div class="project-stat-label">الطلاب</div>
-                </div>
-                <div class="project-stat">
-                    <div class="project-stat-value">${totalClients}</div>
-                    <div class="project-stat-label">العملاء</div>
-                </div>
+        projectElement.innerHTML = `
+            <div class="sidebar-project-name">${project.name}</div>
+            <div class="sidebar-project-stats">
+                <div class="sidebar-project-revenue">${formatCurrency(totalRevenue)}</div>
+                <div class="sidebar-project-count">${totalTransactions} معاملة</div>
             </div>
         `;
         
-        // Add click to filter dashboard by project
-        projectCard.addEventListener('click', (e) => {
-            if (!e.target.closest('.project-actions')) {
-                filterDashboardByProject(project.id);
-            }
+        projectElement.addEventListener('click', () => {
+            selectProject(project.id);
         });
         
-        projectsGrid.appendChild(projectCard);
+        sidebarProjects.appendChild(projectElement);
     });
 }
 
@@ -381,7 +355,7 @@ async function handleProjectSubmit(event) {
     projects.push(projectData);
     localStorage.setItem('projects', JSON.stringify(projects));
     
-    displayProjects();
+    displaySidebarProjects();
     updateBusinessOptions();
     closeAddProjectModal();
     
@@ -416,18 +390,51 @@ function updateBusinessOptions() {
     });
 }
 
-// Filter dashboard by project
-function filterDashboardByProject(projectId) {
+// Select a specific project
+function selectProject(projectId) {
     selectedProject = projectId;
-    loadDashboard();
+    isShowingAllProjects = false;
     
-    // Update page title to show selected project
     const project = projects.find(p => p.id === projectId);
     if (project) {
-        document.querySelector('.section h2').textContent = `لوحة التحكم - ${project.name}`;
+        document.getElementById('dashboard-title').textContent = `لوحة التحكم - ${project.name}`;
+        
+        // Update navigation to show we're in project mode
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            const originalText = btn.textContent;
+            if (!btn.dataset.originalText) {
+                btn.dataset.originalText = originalText;
+            }
+            btn.textContent = btn.dataset.originalText + ` - ${project.name}`;
+        });
     }
     
-    showMessage(`تم تطبيق فلتر ${project.name}`, 'success');
+    displaySidebarProjects();
+    loadDashboard();
+    loadTransactions();
+    
+    showMessage(`تم اختيار مشروع ${project.name}`, 'success');
+}
+
+// Show all projects view
+function showAllProjects() {
+    selectedProject = null;
+    isShowingAllProjects = true;
+    
+    document.getElementById('dashboard-title').textContent = 'لوحة التحكم العامة';
+    
+    // Reset navigation text
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.dataset.originalText) {
+            btn.textContent = btn.dataset.originalText;
+        }
+    });
+    
+    displaySidebarProjects();
+    loadDashboard();
+    loadTransactions();
+    
+    showMessage('تم عرض جميع المشاريع', 'success');
 }
 
 // Edit project (placeholder)
@@ -441,7 +448,13 @@ function deleteProject(projectId) {
         projects = projects.filter(p => p.id !== projectId);
         localStorage.setItem('projects', JSON.stringify(projects));
         
-        displayProjects();
+        // If deleted project was selected, show all projects
+        if (selectedProject === projectId) {
+            showAllProjects();
+        } else {
+            displaySidebarProjects();
+        }
+        
         updateBusinessOptions();
         
         showMessage('تم حذف المشروع بنجاح', 'success');
@@ -461,7 +474,7 @@ function updateRevenueChart() {
     const ctx = document.getElementById('revenueChart').getContext('2d');
     
     // Destroy existing chart if it exists
-    if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
+    if (window.revenueChart && window.revenueChart.destroy) {
         window.revenueChart.destroy();
     }
     

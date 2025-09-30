@@ -3,6 +3,8 @@
 let currentTransactions = [];
 let monthlyAggregates = [];
 let forecastData = {};
+let projects = [];
+let selectedProject = null;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -10,11 +12,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('date').value = new Date().toISOString().slice(0, 16);
     
     // Load initial data
+    loadProjects();
     loadDashboard();
     loadTransactions();
     
     // Set up form submission
     document.getElementById('transaction-form').addEventListener('submit', handleTransactionSubmit);
+    document.getElementById('project-form').addEventListener('submit', handleProjectSubmit);
     
     // Toggle fields based on transaction type
     toggleFields();
@@ -146,16 +150,71 @@ async function loadDashboard() {
 // Update KPI cards
 function updateKPICards() {
     const currentMonth = new Date();
-    const currentMonthData = monthlyAggregates.find(agg => 
-        agg.year === currentMonth.getFullYear() && 
-        agg.month === currentMonth.getMonth() + 1
-    );
+    
+    // Filter aggregates by selected project if any
+    let filteredAggregates = monthlyAggregates;
+    if (selectedProject) {
+        filteredAggregates = monthlyAggregates.filter(agg => agg.businessId === selectedProject);
+    }
+    
+    // Aggregate data across all businesses for current month if no project selected
+    let currentMonthData;
+    if (selectedProject) {
+        currentMonthData = filteredAggregates.find(agg => 
+            agg.year === currentMonth.getFullYear() && 
+            agg.month === currentMonth.getMonth() + 1
+        );
+    } else {
+        // Aggregate all businesses for current month
+        const currentMonthAggregates = monthlyAggregates.filter(agg => 
+            agg.year === currentMonth.getFullYear() && 
+            agg.month === currentMonth.getMonth() + 1
+        );
+        
+        if (currentMonthAggregates.length > 0) {
+            currentMonthData = currentMonthAggregates.reduce((total, agg) => ({
+                total_revenue: total.total_revenue + agg.total_revenue,
+                net_profit: total.net_profit + agg.net_profit,
+                students_count: total.students_count + agg.students_count,
+                clients_count: total.clients_count + (agg.clients_count || 0)
+            }), {
+                total_revenue: 0,
+                net_profit: 0,
+                students_count: 0,
+                clients_count: 0
+            });
+        }
+    }
     
     const lastMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1);
-    const lastMonthData = monthlyAggregates.find(agg => 
-        agg.year === lastMonth.getFullYear() && 
-        agg.month === lastMonth.getMonth() + 1
-    );
+    
+    let lastMonthData;
+    if (selectedProject) {
+        lastMonthData = filteredAggregates.find(agg => 
+            agg.year === lastMonth.getFullYear() && 
+            agg.month === lastMonth.getMonth() + 1
+        );
+    } else {
+        // Aggregate all businesses for last month
+        const lastMonthAggregates = monthlyAggregates.filter(agg => 
+            agg.year === lastMonth.getFullYear() && 
+            agg.month === lastMonth.getMonth() + 1
+        );
+        
+        if (lastMonthAggregates.length > 0) {
+            lastMonthData = lastMonthAggregates.reduce((total, agg) => ({
+                total_revenue: total.total_revenue + agg.total_revenue,
+                net_profit: total.net_profit + agg.net_profit,
+                students_count: total.students_count + agg.students_count,
+                clients_count: total.clients_count + (agg.clients_count || 0)
+            }), {
+                total_revenue: 0,
+                net_profit: 0,
+                students_count: 0,
+                clients_count: 0
+            });
+        }
+    }
     
     // Current revenue
     const currentRevenue = currentMonthData ? currentMonthData.total_revenue : 0;
@@ -196,6 +255,199 @@ function updateKPICards() {
     document.getElementById('forecast-confidence').textContent = getConfidenceText(forecastData.confidence);
 }
 
+// Load and display projects
+function loadProjects() {
+    // Initialize with default projects if none exist
+    if (!localStorage.getItem('projects')) {
+        projects = [
+            {
+                id: 'abayat_shop',
+                name: 'محل العبايات',
+                description: 'متجر العبايات والملابس النسائية',
+                color: '#4CAF50'
+            },
+            {
+                id: 'courses',
+                name: 'الدورات التدريبية',
+                description: 'دورات تدريبية في مختلف المجالات',
+                color: '#2196F3'
+            },
+            {
+                id: 'consultation',
+                name: 'الاستشارات',
+                description: 'خدمات الاستشارة المهنية',
+                color: '#FF9800'
+            }
+        ];
+        localStorage.setItem('projects', JSON.stringify(projects));
+    } else {
+        projects = JSON.parse(localStorage.getItem('projects'));
+    }
+    
+    displayProjects();
+    updateBusinessOptions();
+}
+
+// Display projects in grid
+function displayProjects() {
+    const projectsGrid = document.getElementById('projects-grid');
+    projectsGrid.innerHTML = '';
+    
+    projects.forEach(project => {
+        // Calculate project stats
+        const projectTransactions = currentTransactions.filter(t => t.businessId === project.id);
+        const projectAggregates = monthlyAggregates.filter(agg => agg.businessId === project.id);
+        
+        const totalRevenue = projectAggregates.reduce((sum, agg) => sum + agg.total_revenue, 0);
+        const totalProfit = projectAggregates.reduce((sum, agg) => sum + agg.net_profit, 0);
+        const totalStudents = projectAggregates.reduce((sum, agg) => sum + agg.students_count, 0);
+        const totalClients = projectAggregates.reduce((sum, agg) => sum + (agg.clients_count || 0), 0);
+        
+        const projectCard = document.createElement('div');
+        projectCard.className = 'project-card';
+        projectCard.style.setProperty('--project-color', project.color);
+        projectCard.style.setProperty('--project-color-transparent', project.color + '30');
+        
+        projectCard.innerHTML = `
+            <div class="project-header">
+                <div class="project-info">
+                    <h4>${project.name}</h4>
+                    <p>${project.description}</p>
+                </div>
+                <div class="project-actions">
+                    <button class="edit-project-btn" onclick="editProject('${project.id}')">تعديل</button>
+                    <button class="delete-project-btn" onclick="deleteProject('${project.id}')">حذف</button>
+                </div>
+            </div>
+            <div class="project-stats">
+                <div class="project-stat">
+                    <div class="project-stat-value">${formatCurrency(totalRevenue)}</div>
+                    <div class="project-stat-label">الإيرادات</div>
+                </div>
+                <div class="project-stat">
+                    <div class="project-stat-value">${formatCurrency(totalProfit)}</div>
+                    <div class="project-stat-label">الأرباح</div>
+                </div>
+                <div class="project-stat">
+                    <div class="project-stat-value">${totalStudents}</div>
+                    <div class="project-stat-label">الطلاب</div>
+                </div>
+                <div class="project-stat">
+                    <div class="project-stat-value">${totalClients}</div>
+                    <div class="project-stat-label">العملاء</div>
+                </div>
+            </div>
+        `;
+        
+        // Add click to filter dashboard by project
+        projectCard.addEventListener('click', (e) => {
+            if (!e.target.closest('.project-actions')) {
+                filterDashboardByProject(project.id);
+            }
+        });
+        
+        projectsGrid.appendChild(projectCard);
+    });
+}
+
+// Open add project modal
+function openAddProjectModal() {
+    document.getElementById('addProjectModal').style.display = 'block';
+}
+
+// Close add project modal
+function closeAddProjectModal() {
+    document.getElementById('addProjectModal').style.display = 'none';
+    document.getElementById('project-form').reset();
+}
+
+// Handle project form submission
+async function handleProjectSubmit(event) {
+    event.preventDefault();
+    
+    const projectData = {
+        id: document.getElementById('project-id').value,
+        name: document.getElementById('project-name').value,
+        description: document.getElementById('project-description').value,
+        color: document.getElementById('project-color').value
+    };
+    
+    // Check if project ID already exists
+    if (projects.some(p => p.id === projectData.id)) {
+        showMessage('معرف المشروع موجود بالفعل', 'error');
+        return;
+    }
+    
+    projects.push(projectData);
+    localStorage.setItem('projects', JSON.stringify(projects));
+    
+    displayProjects();
+    updateBusinessOptions();
+    closeAddProjectModal();
+    
+    showMessage('تم إضافة المشروع بنجاح!', 'success');
+}
+
+// Update business options in forms
+function updateBusinessOptions() {
+    const businessSelects = document.querySelectorAll('#business, #filter-business, #report-business');
+    
+    businessSelects.forEach(select => {
+        // Save current value
+        const currentValue = select.value;
+        
+        // Clear options except "اختر العمل" or "جميع الأعمال"
+        const firstOption = select.firstElementChild;
+        select.innerHTML = '';
+        select.appendChild(firstOption);
+        
+        // Add project options
+        projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.name;
+            select.appendChild(option);
+        });
+        
+        // Restore value if it still exists
+        if (currentValue && projects.some(p => p.id === currentValue)) {
+            select.value = currentValue;
+        }
+    });
+}
+
+// Filter dashboard by project
+function filterDashboardByProject(projectId) {
+    selectedProject = projectId;
+    loadDashboard();
+    
+    // Update page title to show selected project
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+        document.querySelector('.section h2').textContent = `لوحة التحكم - ${project.name}`;
+    }
+    
+    showMessage(`تم تطبيق فلتر ${project.name}`, 'success');
+}
+
+// Edit project (placeholder)
+function editProject(projectId) {
+    showMessage('ميزة تعديل المشروع ستكون متاحة قريباً', 'info');
+}
+
+// Delete project
+function deleteProject(projectId) {
+    if (confirm('هل أنت متأكد من حذف هذا المشروع؟ سيتم حذف جميع البيانات المرتبطة به.')) {
+        projects = projects.filter(p => p.id !== projectId);
+        localStorage.setItem('projects', JSON.stringify(projects));
+        
+        displayProjects();
+        updateBusinessOptions();
+        
+        showMessage('تم حذف المشروع بنجاح', 'success');
+    }
+}
+
 // Update charts
 function updateCharts() {
     updateRevenueChart();
@@ -213,9 +465,32 @@ function updateRevenueChart() {
         window.revenueChart.destroy();
     }
     
-    const labels = monthlyAggregates.map(agg => `${agg.year}/${agg.month}`);
-    const revenueData = monthlyAggregates.map(agg => agg.total_revenue);
-    const profitData = monthlyAggregates.map(agg => agg.net_profit);
+    // Filter data by selected project if any
+    let chartData = monthlyAggregates;
+    if (selectedProject) {
+        chartData = monthlyAggregates.filter(agg => agg.businessId === selectedProject);
+    } else {
+        // Aggregate by month across all businesses
+        const monthlyTotals = {};
+        monthlyAggregates.forEach(agg => {
+            const key = `${agg.year}/${agg.month}`;
+            if (!monthlyTotals[key]) {
+                monthlyTotals[key] = {
+                    year: agg.year,
+                    month: agg.month,
+                    total_revenue: 0,
+                    net_profit: 0
+                };
+            }
+            monthlyTotals[key].total_revenue += agg.total_revenue;
+            monthlyTotals[key].net_profit += agg.net_profit;
+        });
+        chartData = Object.values(monthlyTotals).sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
+    }
+    
+    const labels = chartData.map(agg => `${agg.year}/${agg.month}`);
+    const revenueData = chartData.map(agg => agg.total_revenue);
+    const profitData = chartData.map(agg => agg.net_profit);
     
     window.revenueChart = new Chart(ctx, {
         type: 'line',
@@ -266,8 +541,40 @@ function updateRevenueChart() {
 function updateBusinessChart() {
     const ctx = document.getElementById('businessChart').getContext('2d');
     
-    if (window.businessChart && typeof window.businessChart.destroy === 'function') {
+    if (window.businessChart && window.businessChart.destroy) {
         window.businessChart.destroy();
+    }
+    
+    // If project is selected, show only that project
+    if (selectedProject) {
+        const project = projects.find(p => p.id === selectedProject);
+        const projectRevenue = monthlyAggregates
+            .filter(agg => agg.businessId === selectedProject)
+            .reduce((sum, agg) => sum + agg.total_revenue, 0);
+            
+        window.businessChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: [project ? project.name : selectedProject],
+                datasets: [{
+                    data: [projectRevenue],
+                    backgroundColor: [project ? project.color : '#4CAF50']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + formatCurrency(context.parsed);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        return;
     }
     
     // Aggregate revenue by business
@@ -318,7 +625,7 @@ function updateBusinessChart() {
 function updateClientsChart() {
     const ctx = document.getElementById('clientsChart').getContext('2d');
     
-    if (window.clientsChart && typeof window.clientsChart.destroy === 'function') {
+    if (window.clientsChart && window.clientsChart.destroy) {
         window.clientsChart.destroy();
     }
     
@@ -362,7 +669,7 @@ function updateClientsChart() {
 function updateExpensesChart() {
     const ctx = document.getElementById('expensesChart').getContext('2d');
     
-    if (window.expensesChart && typeof window.expensesChart.destroy === 'function') {
+    if (window.expensesChart && window.expensesChart.destroy) {
         window.expensesChart.destroy();
     }
     
@@ -598,13 +905,8 @@ function formatDate(dateString) {
 }
 
 function getBusinessName(businessId) {
-    const businessNames = {
-        'abayat_shop': 'محل العبايات',
-        'courses': 'الدورات التدريبية',
-        'consultation': 'الاستشارات',
-        'other': 'أخرى'
-    };
-    return businessNames[businessId] || businessId;
+    const project = projects.find(p => p.id === businessId);
+    return project ? project.name : businessId;
 }
 
 function getCategoryName(category) {

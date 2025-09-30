@@ -1,4 +1,3 @@
-
 * {
     box-sizing: border-box;
     margin: 0;
@@ -276,15 +275,34 @@ nav {
 }
 
 .kpi-change.positive {
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    color: #4CAF50;
 }
 
 .kpi-change.negative {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    color: #f44336;
+}
+
+.kpi-change.yearly-income {
+    color: #2196F3;
+    font-weight: 600;
+}
+
+.income-label {
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.sidebar-project-yearly,
+.sidebar-project-monthly {
+    margin: 2px 0;
+    font-size: 0.9em;
+}
+
+.sidebar-project-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 /* Charts */
@@ -573,7 +591,7 @@ table tr:hover {
     .main-content {
         padding-right: 280px;
     }
-    
+
     .projects-sidebar {
         width: 260px;
     }
@@ -583,12 +601,12 @@ table tr:hover {
     .app-layout {
         flex-direction: column;
     }
-    
+
     .main-content {
         padding: 15px;
         padding-right: 15px;
     }
-    
+
     .projects-sidebar {
         position: relative;
         width: 100%;
@@ -596,32 +614,32 @@ table tr:hover {
         order: -1;
         padding: 20px 15px;
     }
-    
+
     header h1 {
         font-size: 2em;
     }
-    
+
     .kpi-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .charts-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .filters {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .report-controls {
         flex-direction: column;
     }
-    
+
     .nav-btn {
         padding: 12px 20px;
         font-size: 14px;
@@ -724,8 +742,8 @@ table tr:hover {
 
 .sidebar-project-stats {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .sidebar-project-revenue {

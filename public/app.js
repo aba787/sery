@@ -6,11 +6,15 @@ let forecastData = {};
 let projects = [];
 let selectedProject = null;
 let isShowingAllProjects = true;
+let yearlyIncomes = {}; // Track yearly income for each project
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     // Set default date to now
     document.getElementById('date').value = new Date().toISOString().slice(0, 16);
+    
+    // Check for monthly reset
+    checkAndResetMonthlyIncome();
     
     // Load initial data
     loadProjects();
@@ -217,14 +221,25 @@ function updateKPICards() {
         }
     }
     
-    // Current revenue
+    // Current revenue and yearly income
     const currentRevenue = currentMonthData ? currentMonthData.total_revenue : 0;
     const lastRevenue = lastMonthData ? lastMonthData.total_revenue : 0;
     const revenueChange = lastRevenue > 0 ? ((currentRevenue - lastRevenue) / lastRevenue * 100) : 0;
     
+    // Calculate yearly income for selected project or all projects
+    let yearlyIncome = 0;
+    if (selectedProject) {
+        yearlyIncome = getProjectYearlyIncome(selectedProject);
+    } else {
+        // Sum yearly income for all projects
+        projects.forEach(project => {
+            yearlyIncome += getProjectYearlyIncome(project.id);
+        });
+    }
+    
     document.getElementById('current-revenue').textContent = formatCurrency(currentRevenue);
-    document.getElementById('revenue-change').textContent = formatPercentage(revenueChange);
-    document.getElementById('revenue-change').className = 'kpi-change ' + (revenueChange >= 0 ? 'positive' : 'negative');
+    document.getElementById('revenue-change').textContent = `السنوي: ${formatCurrency(yearlyIncome)}`;
+    document.getElementById('revenue-change').className = 'kpi-change yearly-income';
     
     // Current profit
     const currentProfit = currentMonthData ? currentMonthData.net_profit : 0;
@@ -254,6 +269,115 @@ function updateKPICards() {
     // Forecast
     document.getElementById('forecast-profit').textContent = formatCurrency(forecastData.forecast_profit || 0);
     document.getElementById('forecast-confidence').textContent = getConfidenceText(forecastData.confidence);
+}
+
+// Check and reset monthly income if it's a new month
+function checkAndResetMonthlyIncome() {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Get last check date from localStorage
+    const lastCheck = localStorage.getItem('lastMonthlyCheck');
+    const lastCheckDate = lastCheck ? new Date(lastCheck) : null;
+    
+    // If it's a new month or first time running
+    if (!lastCheckDate || 
+        lastCheckDate.getMonth() !== currentMonth || 
+        lastCheckDate.getFullYear() !== currentYear) {
+        
+        // If this is not the first run, transfer monthly income to yearly
+        if (lastCheckDate) {
+            transferMonthlyToYearly();
+        }
+        
+        // Update last check date
+        localStorage.setItem('lastMonthlyCheck', now.toISOString());
+        
+        // Initialize yearly incomes if not exists
+        initializeYearlyIncomes();
+    }
+}
+
+// Transfer previous month's income to yearly totals
+function transferMonthlyToYearly() {
+    const yearlyIncomes = getYearlyIncomes();
+    const currentYear = new Date().getFullYear();
+    
+    // Get previous month's aggregates
+    const previousMonth = new Date();
+    previousMonth.setMonth(previousMonth.getMonth() - 1);
+    
+    const prevMonthAggregates = monthlyAggregates.filter(agg => 
+        agg.year === previousMonth.getFullYear() && 
+        agg.month === previousMonth.getMonth() + 1
+    );
+    
+    // Add previous month's revenue to yearly totals
+    prevMonthAggregates.forEach(agg => {
+        const projectKey = `${agg.businessId}_${currentYear}`;
+        if (!yearlyIncomes[projectKey]) {
+            yearlyIncomes[projectKey] = 0;
+        }
+        yearlyIncomes[projectKey] += agg.total_revenue;
+    });
+    
+    // Save updated yearly incomes
+    localStorage.setItem('yearlyIncomes', JSON.stringify(yearlyIncomes));
+    
+    console.log('Monthly income transferred to yearly totals');
+}
+
+// Initialize yearly incomes
+function initializeYearlyIncomes() {
+    const stored = localStorage.getItem('yearlyIncomes');
+    if (!stored) {
+        yearlyIncomes = {};
+        localStorage.setItem('yearlyIncomes', JSON.stringify(yearlyIncomes));
+    } else {
+        yearlyIncomes = JSON.parse(stored);
+    }
+}
+
+// Get yearly incomes from localStorage
+function getYearlyIncomes() {
+    const stored = localStorage.getItem('yearlyIncomes');
+    return stored ? JSON.parse(stored) : {};
+}
+
+// Get yearly income for a specific project
+function getProjectYearlyIncome(projectId) {
+    const currentYear = new Date().getFullYear();
+    const yearlyIncomes = getYearlyIncomes();
+    const projectKey = `${projectId}_${currentYear}`;
+    
+    // Get stored yearly income
+    const storedYearly = yearlyIncomes[projectKey] || 0;
+    
+    // Get current year's monthly totals (excluding current month if we're tracking separately)
+    const currentYearAggregates = monthlyAggregates.filter(agg => 
+        agg.businessId === projectId && 
+        agg.year === currentYear &&
+        agg.month < new Date().getMonth() + 1 // Only completed months
+    );
+    
+    const monthlyTotal = currentYearAggregates.reduce((sum, agg) => sum + agg.total_revenue, 0);
+    
+    return storedYearly + monthlyTotal;
+}
+
+// Get current month income for a project
+function getProjectMonthlyIncome(projectId) {
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    
+    const currentMonthAggregate = monthlyAggregates.find(agg => 
+        agg.businessId === projectId && 
+        agg.year === currentYear && 
+        agg.month === currentMonth
+    );
+    
+    return currentMonthAggregate ? currentMonthAggregate.total_revenue : 0;
 }
 
 // Load and display projects
@@ -296,8 +420,8 @@ function displaySidebarProjects() {
     
     projects.forEach(project => {
         // Calculate project stats
-        const projectAggregates = monthlyAggregates.filter(agg => agg.businessId === project.id);
-        const totalRevenue = projectAggregates.reduce((sum, agg) => sum + agg.total_revenue, 0);
+        const yearlyIncome = getProjectYearlyIncome(project.id);
+        const monthlyIncome = getProjectMonthlyIncome(project.id);
         const totalTransactions = currentTransactions.filter(t => t.businessId === project.id).length;
         
         const projectElement = document.createElement('div');
@@ -311,7 +435,12 @@ function displaySidebarProjects() {
         projectElement.innerHTML = `
             <div class="sidebar-project-name">${project.name}</div>
             <div class="sidebar-project-stats">
-                <div class="sidebar-project-revenue">${formatCurrency(totalRevenue)}</div>
+                <div class="sidebar-project-yearly">
+                    <span class="income-label">السنوي:</span> ${formatCurrency(yearlyIncome)}
+                </div>
+                <div class="sidebar-project-monthly">
+                    <span class="income-label">هذا الشهر:</span> ${formatCurrency(monthlyIncome)}
+                </div>
                 <div class="sidebar-project-count">${totalTransactions} معاملة</div>
             </div>
         `;

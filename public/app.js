@@ -603,7 +603,7 @@ function updateRevenueChart() {
     const ctx = document.getElementById('revenueChart').getContext('2d');
     
     // Destroy existing chart if it exists
-    if (window.revenueChart && window.revenueChart.destroy) {
+    if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
         window.revenueChart.destroy();
     }
     
@@ -683,7 +683,7 @@ function updateRevenueChart() {
 function updateBusinessChart() {
     const ctx = document.getElementById('businessChart').getContext('2d');
     
-    if (window.businessChart && window.businessChart.destroy) {
+    if (window.businessChart && typeof window.businessChart.destroy === 'function') {
         window.businessChart.destroy();
     }
     
@@ -767,7 +767,7 @@ function updateBusinessChart() {
 function updateClientsChart() {
     const ctx = document.getElementById('clientsChart').getContext('2d');
     
-    if (window.clientsChart && window.clientsChart.destroy) {
+    if (window.clientsChart && typeof window.clientsChart.destroy === 'function') {
         window.clientsChart.destroy();
     }
     
@@ -811,7 +811,7 @@ function updateClientsChart() {
 function updateExpensesChart() {
     const ctx = document.getElementById('expensesChart').getContext('2d');
     
-    if (window.expensesChart && window.expensesChart.destroy) {
+    if (window.expensesChart && typeof window.expensesChart.destroy === 'function') {
         window.expensesChart.destroy();
     }
     
@@ -1079,10 +1079,23 @@ function showMessage(message, type) {
     messageDiv.className = `message ${type}`;
     messageDiv.textContent = message;
     
-    document.querySelector('.container').insertBefore(messageDiv, document.querySelector('header').nextSibling);
+    // Find a suitable container - try main-content first, then body
+    const container = document.querySelector('.main-content') || document.body;
+    const header = document.querySelector('header');
+    
+    if (container && header) {
+        container.insertBefore(messageDiv, header.nextSibling);
+    } else if (container) {
+        container.appendChild(messageDiv);
+    } else {
+        // Fallback: just append to body
+        document.body.appendChild(messageDiv);
+    }
     
     setTimeout(() => {
-        messageDiv.remove();
+        if (messageDiv.parentNode) {
+            messageDiv.remove();
+        }
     }, 5000);
 }
 

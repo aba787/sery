@@ -58,6 +58,16 @@
                     </div>
                 </div>
                 
+                <div class="kpi-card clients">
+                    <div class="achievement-badge">👥</div>
+                    <h3>عدد العملاء</h3>
+                    <div class="kpi-value" id="current-clients">0</div>
+                    <div class="kpi-change" id="clients-change">+0%</div>
+                    <div class="progress-indicator">
+                        <div class="progress-bar" style="width: 75%"></div>
+                    </div>
+                </div>
+                
                 <div class="kpi-card forecast">
                     <div class="achievement-badge">🚀</div>
                     <h3>توقع الشهر القادم</h3>
@@ -82,8 +92,8 @@
                 </div>
                 
                 <div class="chart-container">
-                    <h3>عدد الطلاب الشهري</h3>
-                    <canvas id="studentsChart"></canvas>
+                    <h3>الطلاب والعملاء الشهري</h3>
+                    <canvas id="clientsChart"></canvas>
                 </div>
                 
                 <div class="chart-container">
@@ -150,6 +160,11 @@
                 <div class="form-group" id="students-group">
                     <label for="students">عدد الطلاب:</label>
                     <input type="number" id="students" min="0">
+                </div>
+                
+                <div class="form-group" id="clients-group">
+                    <label for="clients">عدد العملاء:</label>
+                    <input type="number" id="clients" min="0">
                 </div>
                 
                 <div class="form-group full-width">

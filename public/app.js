@@ -59,6 +59,7 @@ async function handleTransactionSubmit(event) {
         amount: parseFloat(document.getElementById('amount').value),
         cost: parseFloat(document.getElementById('cost').value) || 0,
         students: parseInt(document.getElementById('students').value) || 0,
+        clients: parseInt(document.getElementById('clients').value) || 0,
         notes: document.getElementById('notes').value,
         paymentMethod: document.getElementById('payment-method').value
     };
@@ -90,15 +91,19 @@ async function handleTransactionSubmit(event) {
 function toggleFields() {
     const type = document.getElementById('type').value;
     const studentsGroup = document.getElementById('students-group');
+    const clientsGroup = document.getElementById('clients-group');
     const costGroup = document.getElementById('cost-group');
     
     if (type === 'revenue') {
         studentsGroup.style.display = 'flex';
+        clientsGroup.style.display = 'flex';
         costGroup.style.display = 'flex';
     } else if (type === 'expense') {
         studentsGroup.style.display = 'none';
+        clientsGroup.style.display = 'none';
         costGroup.style.display = 'none';
         document.getElementById('students').value = '';
+        document.getElementById('clients').value = '';
         document.getElementById('cost').value = '';
     }
 }
@@ -170,14 +175,21 @@ function updateKPICards() {
     document.getElementById('profit-change').textContent = formatPercentage(profitChange);
     document.getElementById('profit-change').className = 'kpi-change ' + (profitChange >= 0 ? 'positive' : 'negative');
     
-    // Current students
+    // Current students and clients
     const currentStudents = currentMonthData ? currentMonthData.students_count : 0;
+    const currentClients = currentMonthData ? currentMonthData.clients_count || 0 : 0;
     const lastStudents = lastMonthData ? lastMonthData.students_count : 0;
+    const lastClients = lastMonthData ? lastMonthData.clients_count || 0 : 0;
     const studentsChange = lastStudents > 0 ? ((currentStudents - lastStudents) / lastStudents * 100) : 0;
+    const clientsChange = lastClients > 0 ? ((currentClients - lastClients) / lastClients * 100) : 0;
     
     document.getElementById('current-students').textContent = currentStudents;
     document.getElementById('students-change').textContent = formatPercentage(studentsChange);
     document.getElementById('students-change').className = 'kpi-change ' + (studentsChange >= 0 ? 'positive' : 'negative');
+    
+    document.getElementById('current-clients').textContent = currentClients;
+    document.getElementById('clients-change').textContent = formatPercentage(clientsChange);
+    document.getElementById('clients-change').className = 'kpi-change ' + (clientsChange >= 0 ? 'positive' : 'negative');
     
     // Forecast
     document.getElementById('forecast-profit').textContent = formatCurrency(forecastData.forecast_profit || 0);
@@ -188,7 +200,7 @@ function updateKPICards() {
 function updateCharts() {
     updateRevenueChart();
     updateBusinessChart();
-    updateStudentsChart();
+    updateClientsChart();
     updateExpensesChart();
 }
 
@@ -197,7 +209,7 @@ function updateRevenueChart() {
     const ctx = document.getElementById('revenueChart').getContext('2d');
     
     // Destroy existing chart if it exists
-    if (window.revenueChart) {
+    if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
         window.revenueChart.destroy();
     }
     
@@ -254,7 +266,7 @@ function updateRevenueChart() {
 function updateBusinessChart() {
     const ctx = document.getElementById('businessChart').getContext('2d');
     
-    if (window.businessChart) {
+    if (window.businessChart && typeof window.businessChart.destroy === 'function') {
         window.businessChart.destroy();
     }
     
@@ -302,18 +314,19 @@ function updateBusinessChart() {
     });
 }
 
-// Students chart
-function updateStudentsChart() {
-    const ctx = document.getElementById('studentsChart').getContext('2d');
+// Clients chart
+function updateClientsChart() {
+    const ctx = document.getElementById('clientsChart').getContext('2d');
     
-    if (window.studentsChart) {
-        window.studentsChart.destroy();
+    if (window.clientsChart && typeof window.clientsChart.destroy === 'function') {
+        window.clientsChart.destroy();
     }
     
     const labels = monthlyAggregates.map(agg => `${agg.year}/${agg.month}`);
     const studentsData = monthlyAggregates.map(agg => agg.students_count);
+    const clientsData = monthlyAggregates.map(agg => agg.clients_count || 0);
     
-    window.studentsChart = new Chart(ctx, {
+    window.clientsChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -322,6 +335,12 @@ function updateStudentsChart() {
                 data: studentsData,
                 backgroundColor: '#FF9800',
                 borderColor: '#F57C00',
+                borderWidth: 1
+            }, {
+                label: 'عدد العملاء',
+                data: clientsData,
+                backgroundColor: '#9C27B0',
+                borderColor: '#7B1FA2',
                 borderWidth: 1
             }]
         },
@@ -343,7 +362,7 @@ function updateStudentsChart() {
 function updateExpensesChart() {
     const ctx = document.getElementById('expensesChart').getContext('2d');
     
-    if (window.expensesChart) {
+    if (window.expensesChart && typeof window.expensesChart.destroy === 'function') {
         window.expensesChart.destroy();
     }
     

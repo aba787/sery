@@ -79,6 +79,7 @@ function calculateMonthlyAggregates() {
         total_expenses: 0,
         net_profit: 0,
         students_count: 0,
+        clients_count: 0,
         transactions_count: 0
       };
     }
@@ -89,6 +90,8 @@ function calculateMonthlyAggregates() {
     if (transaction.type === 'revenue') {
       agg.total_revenue += parseFloat(transaction.amount || 0);
       agg.students_count += parseInt(transaction.students || 0);
+      if (!agg.clients_count) agg.clients_count = 0;
+      agg.clients_count += parseInt(transaction.clients || 0);
     } else if (transaction.type === 'expense') {
       agg.total_expenses += parseFloat(transaction.amount || 0);
     }

@@ -222,6 +222,11 @@ nav {
     --accent-color-transparent: rgba(167, 139, 250, 0.3);
 }
 
+.kpi-card.clients {
+    --accent-color: #9c27b0;
+    --accent-color-transparent: rgba(156, 39, 176, 0.3);
+}
+
 .kpi-card h3 {
     color: rgba(255, 255, 255, 0.8);
     font-size: 16px;

@@ -1,0 +1,231 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة الأعمال والتحليلات</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/1.30.1/date_fns.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏪 نظام إدارة الأعمال والتحليلات</h1>
+            <nav>
+                <button onclick="showSection('dashboard')" class="nav-btn active">لوحة التحكم</button>
+                <button onclick="showSection('add-transaction')" class="nav-btn">إضافة معاملة</button>
+                <button onclick="showSection('transactions')" class="nav-btn">المعاملات</button>
+                <button onclick="showSection('reports')" class="nav-btn">التقارير</button>
+            </nav>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section active">
+            <h2>لوحة التحكم الرئيسية</h2>
+            
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card revenue">
+                    <h3>إيرادات هذا الشهر</h3>
+                    <div class="kpi-value" id="current-revenue">0 ريال</div>
+                    <div class="kpi-change" id="revenue-change">+0%</div>
+                </div>
+                
+                <div class="kpi-card profit">
+                    <h3>صافي الربح</h3>
+                    <div class="kpi-value" id="current-profit">0 ريال</div>
+                    <div class="kpi-change" id="profit-change">+0%</div>
+                </div>
+                
+                <div class="kpi-card students">
+                    <h3>عدد الطلاب</h3>
+                    <div class="kpi-value" id="current-students">0</div>
+                    <div class="kpi-change" id="students-change">+0%</div>
+                </div>
+                
+                <div class="kpi-card forecast">
+                    <h3>توقع الشهر القادم</h3>
+                    <div class="kpi-value" id="forecast-profit">0 ريال</div>
+                    <div class="kpi-change" id="forecast-confidence">ثقة متوسطة</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>الإيرادات والأرباح الشهرية</h3>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>توزيع الإيرادات حسب الأعمال</h3>
+                    <canvas id="businessChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>عدد الطلاب الشهري</h3>
+                    <canvas id="studentsChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>المصاريف مقابل الإيرادات</h3>
+                    <canvas id="expensesChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Add Transaction Section -->
+        <section id="add-transaction" class="section">
+            <h2>إضافة معاملة جديدة</h2>
+            <form id="transaction-form" class="form-grid">
+                <div class="form-group">
+                    <label for="date">التاريخ:</label>
+                    <input type="datetime-local" id="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="business">اسم العمل/البراند:</label>
+                    <select id="business" required>
+                        <option value="">اختر العمل</option>
+                        <option value="abayat_shop">محل العبايات</option>
+                        <option value="courses">الدورات التدريبية</option>
+                        <option value="consultation">الاستشارات</option>
+                        <option value="other">أخرى</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="type">نوع المعاملة:</label>
+                    <select id="type" required onchange="toggleFields()">
+                        <option value="">اختر النوع</option>
+                        <option value="revenue">إيرادات</option>
+                        <option value="expense">مصاريف</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">الفئة:</label>
+                    <select id="category" required>
+                        <option value="">اختر الفئة</option>
+                        <option value="course">دورة</option>
+                        <option value="product">منتج</option>
+                        <option value="subscription">اشتراك</option>
+                        <option value="consultation">استشارة</option>
+                        <option value="marketing">تسويق</option>
+                        <option value="supplies">مستلزمات</option>
+                        <option value="rent">إيجار</option>
+                        <option value="other">أخرى</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="amount">المبلغ (ريال):</label>
+                    <input type="number" id="amount" step="0.01" required>
+                </div>
+                
+                <div class="form-group" id="cost-group">
+                    <label for="cost">التكلفة المباشرة (ريال):</label>
+                    <input type="number" id="cost" step="0.01">
+                </div>
+                
+                <div class="form-group" id="students-group">
+                    <label for="students">عدد الطلاب:</label>
+                    <input type="number" id="students" min="0">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="notes">ملاحظات:</label>
+                    <textarea id="notes" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payment-method">طريقة الدفع:</label>
+                    <select id="payment-method">
+                        <option value="cash">نقداً</option>
+                        <option value="bank">تحويل بنكي</option>
+                        <option value="card">بطاقة</option>
+                        <option value="online">دفع إلكتروني</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="submit-btn">حفظ المعاملة</button>
+            </form>
+        </section>
+
+        <!-- Transactions Section -->
+        <section id="transactions" class="section">
+            <h2>جميع المعاملات</h2>
+            
+            <div class="filters">
+                <input type="date" id="filter-start" placeholder="من تاريخ">
+                <input type="date" id="filter-end" placeholder="إلى تاريخ">
+                <select id="filter-business">
+                    <option value="">جميع الأعمال</option>
+                    <option value="abayat_shop">محل العبايات</option>
+                    <option value="courses">الدورات التدريبية</option>
+                    <option value="consultation">الاستشارات</option>
+                    <option value="other">أخرى</option>
+                </select>
+                <select id="filter-type">
+                    <option value="">جميع الأنواع</option>
+                    <option value="revenue">إيرادات</option>
+                    <option value="expense">مصاريف</option>
+                </select>
+                <button onclick="applyFilters()">تطبيق الفلاتر</button>
+                <button onclick="clearFilters()">مسح الفلاتر</button>
+            </div>
+            
+            <div class="table-container">
+                <table id="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>العمل</th>
+                            <th>النوع</th>
+                            <th>الفئة</th>
+                            <th>المبلغ</th>
+                            <th>الطلاب</th>
+                            <th>ملاحظات</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-body">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports" class="section">
+            <h2>التقارير والتصدير</h2>
+            
+            <div class="report-controls">
+                <select id="report-period">
+                    <option value="monthly">تقرير شهري</option>
+                    <option value="quarterly">تقرير ربع سنوي</option>
+                    <option value="yearly">تقرير سنوي</option>
+                </select>
+                
+                <select id="report-business">
+                    <option value="">جميع الأعمال</option>
+                    <option value="abayat_shop">محل العبايات</option>
+                    <option value="courses">الدورات التدريبية</option>
+                    <option value="consultation">الاستشارات</option>
+                    <option value="other">أخرى</option>
+                </select>
+                
+                <button onclick="generateReport()">إنشاء التقرير</button>
+                <button onclick="exportToCSV()">تصدير CSV</button>
+            </div>
+            
+            <div id="report-content" class="report-content">
+                <!-- Generated report will appear here -->
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

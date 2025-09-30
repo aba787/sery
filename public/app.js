@@ -108,11 +108,19 @@ async function loadDashboard() {
     try {
         // Load monthly aggregates
         const aggregatesResponse = await fetch('/api/monthly-aggregates');
-        monthlyAggregates = await aggregatesResponse.json();
+        if (aggregatesResponse.ok) {
+            monthlyAggregates = await aggregatesResponse.json();
+        } else {
+            monthlyAggregates = [];
+        }
         
         // Load forecast
         const forecastResponse = await fetch('/api/forecast');
-        forecastData = await forecastResponse.json();
+        if (forecastResponse.ok) {
+            forecastData = await forecastResponse.json();
+        } else {
+            forecastData = { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' };
+        }
         
         // Update KPI cards
         updateKPICards();
@@ -122,7 +130,11 @@ async function loadDashboard() {
         
     } catch (error) {
         console.error('Error loading dashboard:', error);
-        showMessage('خطأ في تحميل البيانات', 'error');
+        // Initialize with empty data instead of showing error
+        monthlyAggregates = [];
+        forecastData = { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' };
+        updateKPICards();
+        updateCharts();
     }
 }
 

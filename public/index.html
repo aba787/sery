@@ -12,7 +12,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>🏪 نظام إدارة الأعمال والتحليلات</h1>
+            <h1>✨ نظام إدارة الأعمال والتحليلات المتقدم</h1>
+            <p style="text-align: center; color: rgba(255,255,255,0.7); margin-bottom: 20px; font-size: 18px;">تحقيق الأهداف من خلال البيانات الذكية</p>
             <nav>
                 <button onclick="showSection('dashboard')" class="nav-btn active">لوحة التحكم</button>
                 <button onclick="showSection('add-transaction')" class="nav-btn">إضافة معاملة</button>
@@ -28,27 +29,43 @@
             <!-- KPI Cards -->
             <div class="kpi-grid">
                 <div class="kpi-card revenue">
+                    <div class="achievement-badge">💰</div>
                     <h3>إيرادات هذا الشهر</h3>
                     <div class="kpi-value" id="current-revenue">0 ريال</div>
                     <div class="kpi-change" id="revenue-change">+0%</div>
+                    <div class="progress-indicator">
+                        <div class="progress-bar" style="width: 75%"></div>
+                    </div>
                 </div>
                 
                 <div class="kpi-card profit">
+                    <div class="achievement-badge">📈</div>
                     <h3>صافي الربح</h3>
                     <div class="kpi-value" id="current-profit">0 ريال</div>
                     <div class="kpi-change" id="profit-change">+0%</div>
+                    <div class="progress-indicator">
+                        <div class="progress-bar" style="width: 60%"></div>
+                    </div>
                 </div>
                 
                 <div class="kpi-card students">
+                    <div class="achievement-badge">🎓</div>
                     <h3>عدد الطلاب</h3>
                     <div class="kpi-value" id="current-students">0</div>
                     <div class="kpi-change" id="students-change">+0%</div>
+                    <div class="progress-indicator">
+                        <div class="progress-bar" style="width: 85%"></div>
+                    </div>
                 </div>
                 
                 <div class="kpi-card forecast">
+                    <div class="achievement-badge">🚀</div>
                     <h3>توقع الشهر القادم</h3>
                     <div class="kpi-value" id="forecast-profit">0 ريال</div>
                     <div class="kpi-change" id="forecast-confidence">ثقة متوسطة</div>
+                    <div class="progress-indicator">
+                        <div class="progress-bar" style="width: 70%"></div>
+                    </div>
                 </div>
             </div>
 

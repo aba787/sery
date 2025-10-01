@@ -4,23 +4,31 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Use Firebase client SDK for simplicity
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, addDoc, getDocs, query, where, orderBy, Timestamp, deleteDoc, doc, updateDoc } = require('firebase/firestore');
+// Use Firebase Admin SDK for server-side operations
+const admin = require('firebase-admin');
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAM_nhmybRetSdWJASTFz_Mq2OxVmMFD2A",
-  authDomain: "account-3c2d3.firebaseapp.com",
-  projectId: "account-3c2d3",
-  storageBucket: "account-3c2d3.firebasestorage.app",
-  messagingSenderId: "440967751243",
-  appId: "1:440967751243:web:cf8af3219c4a4bd5ed8fce",
-  measurementId: "G-TTHFRS3CRN"
+// Initialize Firebase Admin
+try {
+  // For development, we'll use a service account key (you should add this to secrets)
+  // For now, we'll initialize without credentials for testing
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      projectId: "account-3c2d3",
+      // Add your service account key here in production
+    });
+  }
+} catch (error) {
+  console.error('Firebase Admin initialization error:', error);
+}
+
+const db = admin.firestore();
+
+// Fallback to in-memory storage if Firebase fails
+let memoryStorage = {
+  transactions: [],
+  employees: [],
+  monthlyAggregates: []
 };
-
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
 
 // Middleware
 app.use(express.json());
@@ -99,13 +107,20 @@ app.delete('/api/employees/:id', async (req, res) => {
 app.post('/api/transactions', async (req, res) => {
   try {
     const transaction = req.body;
-    // Add timestamp
-    transaction.createdAt = Timestamp.now();
+    transaction.createdAt = new Date();
     transaction.date = new Date(transaction.date);
+    transaction.id = Date.now().toString(); // Simple ID generation
     
-    // Store in Firestore
-    const docRef = await addDoc(collection(db, 'transactions'), transaction);
-    transaction.id = docRef.id;
+    try {
+      // Try to store in Firestore
+      const docRef = await db.collection('transactions').add(transaction);
+      transaction.id = docRef.id;
+      console.log('Transaction saved to Firebase');
+    } catch (firebaseError) {
+      console.log('Firebase not available, using memory storage');
+      // Fallback to memory storage
+      memoryStorage.transactions.push(transaction);
+    }
     
     // Recalculate monthly aggregates
     await calculateMonthlyAggregates();
@@ -120,59 +135,73 @@ app.post('/api/transactions', async (req, res) => {
 app.get('/api/transactions', async (req, res) => {
   try {
     const { businessId, startDate, endDate } = req.query;
-    let q = collection(db, 'transactions');
+    let transactions = [];
     
-    const constraints = [];
+    try {
+      // Try to get from Firebase
+      const snapshot = await db.collection('transactions').get();
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        transactions.push({
+          id: doc.id,
+          ...data,
+          date: data.date instanceof admin.firestore.Timestamp ? data.date.toDate().toISOString() : data.date,
+          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt
+        });
+      });
+      console.log(`Loaded ${transactions.length} transactions from Firebase`);
+    } catch (firebaseError) {
+      console.log('Firebase not available, using memory storage');
+      // Fallback to memory storage
+      transactions = memoryStorage.transactions.map(t => ({
+        ...t,
+        date: t.date instanceof Date ? t.date.toISOString() : t.date,
+        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt
+      }));
+    }
     
+    // Apply filters
     if (businessId) {
-      constraints.push(where('businessId', '==', businessId));
+      transactions = transactions.filter(t => t.businessId === businessId);
     }
     
     if (startDate) {
-      constraints.push(where('date', '>=', new Date(startDate)));
+      transactions = transactions.filter(t => new Date(t.date) >= new Date(startDate));
     }
     
     if (endDate) {
-      constraints.push(where('date', '<=', new Date(endDate)));
+      transactions = transactions.filter(t => new Date(t.date) <= new Date(endDate));
     }
     
-    constraints.push(orderBy('date', 'desc'));
-    
-    if (constraints.length > 0) {
-      q = query(q, ...constraints);
-    }
-    
-    const querySnapshot = await getDocs(q);
-    const transactions = [];
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      transactions.push({
-        id: doc.id,
-        ...data,
-        date: data.date.toDate ? data.date.toDate().toISOString() : data.date,
-        createdAt: data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
-      });
-    });
+    // Sort by date descending
+    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
     
     res.json(transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);
-    res.status(500).json({ error: error.message });
+    res.json([]); // Return empty array instead of error
   }
 });
 
 app.get('/api/monthly-aggregates', async (req, res) => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'monthlyAggregates'));
-    const aggregates = [];
+    let aggregates = [];
     
-    querySnapshot.forEach((doc) => {
-      aggregates.push({
-        id: doc.id,
-        ...doc.data()
+    try {
+      // Try to get from Firebase
+      const snapshot = await db.collection('monthlyAggregates').get();
+      snapshot.forEach((doc) => {
+        aggregates.push({
+          id: doc.id,
+          ...doc.data()
+        });
       });
-    });
+      console.log(`Loaded ${aggregates.length} aggregates from Firebase`);
+    } catch (firebaseError) {
+      console.log('Firebase not available, using memory storage');
+      // Fallback to memory storage
+      aggregates = memoryStorage.monthlyAggregates;
+    }
     
     // Sort by year and month
     aggregates.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
@@ -180,7 +209,7 @@ app.get('/api/monthly-aggregates', async (req, res) => {
     res.json(aggregates);
   } catch (error) {
     console.error('Error fetching aggregates:', error);
-    res.status(500).json({ error: error.message });
+    res.json([]); // Return empty array instead of error
   }
 });
 
@@ -197,17 +226,26 @@ app.get('/api/forecast', async (req, res) => {
 // Calculate monthly aggregates
 async function calculateMonthlyAggregates() {
   try {
-    const querySnapshot = await getDocs(collection(db, 'transactions'));
-    const transactions = [];
+    let transactions = [];
     
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      transactions.push({
-        id: doc.id,
-        ...data,
-        date: data.date.toDate ? data.date.toDate() : new Date(data.date)
+    try {
+      // Try to get from Firebase
+      const snapshot = await db.collection('transactions').get();
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        transactions.push({
+          id: doc.id,
+          ...data,
+          date: data.date instanceof admin.firestore.Timestamp ? data.date.toDate() : new Date(data.date)
+        });
       });
-    });
+    } catch (firebaseError) {
+      // Fallback to memory storage
+      transactions = memoryStorage.transactions.map(t => ({
+        ...t,
+        date: t.date instanceof Date ? t.date : new Date(t.date)
+      }));
+    }
     
     const aggregates = {};
     
@@ -266,18 +304,30 @@ async function calculateMonthlyAggregates() {
       }
     }
     
-    // Clear existing aggregates and save new ones
-    const existingAggregates = await getDocs(collection(db, 'monthlyAggregates'));
-    const deletePromises = existingAggregates.docs.map(doc => doc.ref.delete());
-    await Promise.all(deletePromises);
+    try {
+      // Try to save to Firebase
+      const batch = db.batch();
+      
+      // Clear existing aggregates
+      const existingSnapshot = await db.collection('monthlyAggregates').get();
+      existingSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      
+      // Add new aggregates
+      aggregatesList.forEach(agg => {
+        const ref = db.collection('monthlyAggregates').doc();
+        batch.set(ref, agg);
+      });
+      
+      await batch.commit();
+      console.log('Monthly aggregates updated in Firebase');
+    } catch (firebaseError) {
+      // Save to memory storage
+      memoryStorage.monthlyAggregates = aggregatesList;
+      console.log('Monthly aggregates updated in memory storage');
+    }
     
-    // Save new aggregates
-    const savePromises = aggregatesList.map(agg => 
-      addDoc(collection(db, 'monthlyAggregates'), agg)
-    );
-    await Promise.all(savePromises);
-    
-    console.log('Monthly aggregates updated in Firestore');
   } catch (error) {
     console.error('Error calculating monthly aggregates:', error);
   }

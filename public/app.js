@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadProjects();
     loadDashboard();
     loadTransactions();
+    loadCompanyProjects();
     
     // Set up form submission
     document.getElementById('transaction-form').addEventListener('submit', handleTransactionSubmit);
@@ -1248,6 +1249,45 @@ function loadCompanyDashboard() {
     updateDepartmentStats();
     updatePayrollSummary();
     updatePerformanceChart();
+    generateDepartmentReports();
+}
+
+function generateDepartmentReports() {
+    const departments = {
+        'programming': { name: 'قسم التطوير', employees: [], totalSalary: 0, projects: 0 },
+        'marketing': { name: 'قسم التسويق', employees: [], totalSalary: 0, projects: 0 },
+        'training': { name: 'قسم التدريب', employees: [], totalSalary: 0, projects: 0 },
+        'other': { name: 'أقسام أخرى', employees: [], totalSalary: 0, projects: 0 }
+    };
+    
+    // Categorize employees
+    employees.forEach(emp => {
+        let dept = 'other';
+        if (emp.role === 'programmer') dept = 'programming';
+        else if (emp.role === 'blogger' || emp.role === 'marketer') dept = 'marketing';
+        else if (emp.role === 'teacher') dept = 'training';
+        
+        departments[dept].employees.push(emp);
+        departments[dept].totalSalary += emp.salary;
+    });
+    
+    // Count projects per department
+    companyProjects.forEach(project => {
+        if (project.assignedEmployees) {
+            const projectEmployees = employees.filter(emp => project.assignedEmployees.includes(emp.id));
+            projectEmployees.forEach(emp => {
+                let dept = 'other';
+                if (emp.role === 'programmer') dept = 'programming';
+                else if (emp.role === 'blogger' || emp.role === 'marketer') dept = 'marketing';
+                else if (emp.role === 'teacher') dept = 'training';
+                
+                departments[dept].projects += 1 / projectEmployees.length; // Distribute project count
+            });
+        }
+    });
+    
+    console.log('Department reports generated:', departments);
+    return departments;
 }
 
 function updateCompanyStats() {
@@ -1505,19 +1545,49 @@ function manageEmployeeLeave(id) {
 
 // Company management functions
 function loadCompanyOverview() {
+    // Load employees first to ensure data is available
+    loadEmployees().then(() => {
+        updateCompanyOverviewData();
+    });
+}
+
+function updateCompanyOverviewData() {
     const totalEmployees = employees.length;
     const totalProjects = projects.length;
     const monthlyCosts = employees.reduce((sum, emp) => sum + emp.salary, 0);
-    const expectedRevenue = monthlyCosts * 2; // Simple calculation
     
-    document.getElementById('company-total-employees').textContent = totalEmployees;
-    document.getElementById('company-total-projects').textContent = totalProjects;
-    document.getElementById('company-monthly-costs').textContent = formatCurrency(monthlyCosts);
-    document.getElementById('company-expected-revenue').textContent = formatCurrency(expectedRevenue);
+    // Calculate expected revenue based on current month's performance
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    const currentMonthAggregates = monthlyAggregates.filter(agg => 
+        agg.year === currentYear && agg.month === currentMonth
+    );
+    const monthlyRevenue = currentMonthAggregates.reduce((sum, agg) => sum + agg.total_revenue, 0);
+    const expectedRevenue = monthlyRevenue > 0 ? monthlyRevenue : monthlyCosts * 2.5; // 2.5x multiplier
+    
+    // Update overview cards
+    const elements = {
+        'company-total-employees': totalEmployees,
+        'company-total-projects': totalProjects,
+        'company-monthly-costs': formatCurrency(monthlyCosts),
+        'company-expected-revenue': formatCurrency(expectedRevenue)
+    };
+    
+    Object.entries(elements).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    });
     
     // Update quick action counts
-    document.getElementById('quick-employees-count').textContent = totalEmployees;
-    document.getElementById('quick-projects-count').textContent = totalProjects;
+    const quickElements = {
+        'quick-employees-count': totalEmployees,
+        'quick-projects-count': totalProjects
+    };
+    
+    Object.entries(quickElements).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    });
     
     updateCompanyCharts();
 }
@@ -1689,8 +1759,203 @@ function exportPayrollReport() {
     showMessage('تم تصدير تقرير الرواتب', 'success');
 }
 
+// Company project management
+let companyProjects = [];
+
+function loadCompanyProjects() {
+    const stored = localStorage.getItem('companyProjects');
+    companyProjects = stored ? JSON.parse(stored) : [];
+    displayCompanyProjects();
+}
+
+function displayCompanyProjects() {
+    const grid = document.getElementById('company-projects-grid');
+    if (!grid) return;
+    
+    grid.innerHTML = '';
+    
+    if (companyProjects.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: rgba(255,255,255,0.7);">
+                <h3>لا توجد مشاريع شركة حالياً</h3>
+                <p>ابدأ بإضافة مشروع شركة جديد</p>
+            </div>
+        `;
+        return;
+    }
+    
+    companyProjects.forEach(project => {
+        const projectCard = document.createElement('div');
+        projectCard.className = 'project-card';
+        projectCard.style.setProperty('--project-color', project.color || '#10b981');
+        projectCard.style.setProperty('--project-color-transparent', (project.color || '#10b981') + '40');
+        
+        const assignedEmployees = employees.filter(emp => 
+            project.assignedEmployees && project.assignedEmployees.includes(emp.id)
+        );
+        
+        const totalBudget = project.budget || 0;
+        const usedBudget = totalBudget * (project.progress || 0) / 100;
+        
+        projectCard.innerHTML = `
+            <div class="project-header">
+                <div class="project-info">
+                    <h4>${project.name}</h4>
+                    <p>${project.description || 'لا يوجد وصف'}</p>
+                </div>
+                <div class="project-actions">
+                    <button onclick="editCompanyProject('${project.id}')" class="edit-project-btn">تعديل</button>
+                    <button onclick="deleteCompanyProject('${project.id}')" class="delete-project-btn">حذف</button>
+                </div>
+            </div>
+            <div class="project-stats">
+                <div class="project-stat">
+                    <div class="project-stat-value">${project.progress || 0}%</div>
+                    <div class="project-stat-label">التقدم</div>
+                </div>
+                <div class="project-stat">
+                    <div class="project-stat-value">${assignedEmployees.length}</div>
+                    <div class="project-stat-label">الموظفات</div>
+                </div>
+                <div class="project-stat">
+                    <div class="project-stat-value">${formatCurrency(usedBudget)}</div>
+                    <div class="project-stat-label">المستخدم من الميزانية</div>
+                </div>
+                <div class="project-stat">
+                    <div class="project-stat-value">${formatDate(project.deadline || new Date())}</div>
+                    <div class="project-stat-label">الموعد النهائي</div>
+                </div>
+            </div>
+            <div class="project-progress-bar" style="margin-top: 15px;">
+                <div style="background: rgba(255,255,255,0.2); height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div style="background: ${project.color || '#10b981'}; height: 100%; width: ${project.progress || 0}%; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+            <div class="project-team" style="margin-top: 15px;">
+                <small style="color: rgba(255,255,255,0.7);">
+                    الفريق: ${assignedEmployees.map(emp => emp.name).join(', ') || 'لم يتم تعيين موظفات'}
+                </small>
+            </div>
+        `;
+        
+        grid.appendChild(projectCard);
+    });
+}
+
 function openCompanyProjectModal() {
-    showMessage('سيتم فتح نافذة إضافة مشروع الشركة قريباً', 'info');
+    const modalHTML = `
+        <div id="companyProjectModal" class="modal" style="display: block;">
+            <div class="modal-content">
+                <span class="close" onclick="closeCompanyProjectModal()">&times;</span>
+                <h2>إضافة مشروع شركة جديد</h2>
+                <form id="company-project-form">
+                    <div class="form-group">
+                        <label for="company-project-name">اسم المشروع:</label>
+                        <input type="text" id="company-project-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-description">وصف المشروع:</label>
+                        <textarea id="company-project-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-budget">الميزانية (ريال):</label>
+                        <input type="number" id="company-project-budget" min="0" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-deadline">الموعد النهائي:</label>
+                        <input type="date" id="company-project-deadline" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-employees">الموظفات المخصصات:</label>
+                        <select id="company-project-employees" multiple style="height: 100px;">
+                            ${employees.map(emp => `<option value="${emp.id}">${emp.name} - ${getRoleName(emp.role)}</option>`).join('')}
+                        </select>
+                        <small style="color: rgba(255,255,255,0.7);">اضغط Ctrl للاختيار المتعدد</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-color">لون المشروع:</label>
+                        <select id="company-project-color">
+                            <option value="#10b981">أخضر</option>
+                            <option value="#3b82f6">أزرق</option>
+                            <option value="#f59e0b">برتقالي</option>
+                            <option value="#8b5cf6">بنفسجي</option>
+                            <option value="#ef4444">أحمر</option>
+                            <option value="#06b6d4">أزرق فاتح</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn">حفظ المشروع</button>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    document.getElementById('company-project-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const selectedEmployees = Array.from(document.getElementById('company-project-employees').selectedOptions).map(option => option.value);
+        
+        const project = {
+            id: Date.now().toString(),
+            name: document.getElementById('company-project-name').value,
+            description: document.getElementById('company-project-description').value,
+            budget: parseFloat(document.getElementById('company-project-budget').value) || 0,
+            deadline: document.getElementById('company-project-deadline').value,
+            assignedEmployees: selectedEmployees,
+            color: document.getElementById('company-project-color').value,
+            progress: 0,
+            status: 'active',
+            createdAt: new Date().toISOString()
+        };
+        
+        companyProjects.push(project);
+        localStorage.setItem('companyProjects', JSON.stringify(companyProjects));
+        
+        closeCompanyProjectModal();
+        displayCompanyProjects();
+        updateCompanyOverviewData();
+        
+        showMessage('تم إضافة مشروع الشركة بنجاح!', 'success');
+    });
+}
+
+function closeCompanyProjectModal() {
+    const modal = document.getElementById('companyProjectModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function editCompanyProject(projectId) {
+    const project = companyProjects.find(p => p.id === projectId);
+    if (!project) return;
+    
+    const newProgress = prompt(`تحديث تقدم المشروع "${project.name}" (0-100):`, project.progress || 0);
+    if (newProgress !== null) {
+        const progress = Math.max(0, Math.min(100, parseInt(newProgress) || 0));
+        project.progress = progress;
+        
+        if (progress === 100) {
+            project.status = 'completed';
+        } else if (progress > 0) {
+            project.status = 'active';
+        }
+        
+        localStorage.setItem('companyProjects', JSON.stringify(companyProjects));
+        displayCompanyProjects();
+        showMessage('تم تحديث تقدم المشروع', 'success');
+    }
+}
+
+function deleteCompanyProject(projectId) {
+    if (confirm('هل أنت متأكد من حذف هذا المشروع؟')) {
+        companyProjects = companyProjects.filter(p => p.id !== projectId);
+        localStorage.setItem('companyProjects', JSON.stringify(companyProjects));
+        displayCompanyProjects();
+        updateCompanyOverviewData();
+        showMessage('تم حذف المشروع بنجاح', 'success');
+    }
 }
 
 // Update navigation to load appropriate sections
@@ -1705,6 +1970,10 @@ window.showSection = function(sectionId) {
     } else if (sectionId === 'company-finance') {
         setTimeout(() => {
             loadCompanyFinance();
+        }, 100);
+    } else if (sectionId === 'company-projects') {
+        setTimeout(() => {
+            loadCompanyProjects();
         }, 100);
     } else if (sectionId === 'company') {
         setTimeout(() => {

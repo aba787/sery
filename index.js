@@ -6,7 +6,6 @@ const PORT = process.env.PORT || 5000;
 
 // Use Firebase Admin SDK for server-side operations
 const admin = require('firebase-admin');
-const { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp } = require('firebase/firestore');
 
 // Initialize Firebase Admin
 let db;
@@ -400,12 +399,20 @@ async function calculateMonthlyAggregates() {
 // Forecast calculation using average growth
 async function calculateForecast() {
   try {
-    const querySnapshot = await getDocs(collection(db, 'monthlyAggregates'));
-    const aggregates = [];
+    let aggregates = [];
     
-    querySnapshot.forEach((doc) => {
-      aggregates.push(doc.data());
-    });
+    if (isFirebaseReady) {
+      try {
+        const snapshot = await db.collection('monthlyAggregates').get();
+        snapshot.forEach((doc) => {
+          aggregates.push(doc.data());
+        });
+      } catch (firebaseError) {
+        aggregates = memoryStorage.monthlyAggregates || [];
+      }
+    } else {
+      aggregates = memoryStorage.monthlyAggregates || [];
+    }
     
     aggregates.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
     

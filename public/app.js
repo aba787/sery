@@ -7,6 +7,7 @@ let projects = [];
 let selectedProject = null;
 let isShowingAllProjects = true;
 let yearlyIncomes = {}; // Track yearly income for each project
+let employees = []; // Track employees
 
 // Firebase integration status
 let firebaseConnected = false;
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up form submission
     document.getElementById('transaction-form').addEventListener('submit', handleTransactionSubmit);
     document.getElementById('project-form').addEventListener('submit', handleProjectSubmit);
+    document.getElementById('employee-form').addEventListener('submit', handleEmployeeSubmit);
     
     // Toggle fields based on transaction type
     toggleFields();
@@ -55,6 +57,8 @@ function showSection(sectionId) {
         loadDashboard();
     } else if (sectionId === 'transactions') {
         loadTransactions();
+    } else if (sectionId === 'employees') {
+        loadEmployees();
     }
 }
 
@@ -1129,7 +1133,134 @@ function showMessage(message, type) {
     }, 5000);
 }
 
-// Placeholder functions for edit/delete (can be implemented later)
+// Employee management functions
+async function handleEmployeeSubmit(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const employee = {
+        name: formData.get('name'),
+        role: formData.get('role'),
+        salary: parseFloat(formData.get('salary')),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        startDate: formData.get('startDate'),
+        notes: formData.get('notes'),
+        status: 'active'
+    };
+    
+    try {
+        const response = await fetch('/api/employees', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(employee)
+        });
+        
+        if (response.ok) {
+            showMessage('تم إضافة الموظفة بنجاح!', 'success');
+            event.target.reset();
+            loadEmployees();
+        } else {
+            throw new Error('فشل في إضافة الموظفة');
+        }
+    } catch (error) {
+        showMessage('حدث خطأ في إضافة الموظفة: ' + error.message, 'error');
+        console.error('Employee add error:', error);
+    }
+}
+
+async function loadEmployees() {
+    try {
+        const response = await fetch('/api/employees');
+        if (response.ok) {
+            employees = await response.json();
+            displayEmployees();
+            updateEmployeesSummary();
+        } else {
+            throw new Error('Failed to fetch employees');
+        }
+    } catch (error) {
+        console.error('Error loading employees:', error);
+        showMessage('خطأ في تحميل بيانات الموظفات', 'error');
+        employees = [];
+        displayEmployees();
+        updateEmployeesSummary();
+    }
+}
+
+function displayEmployees() {
+    const tbody = document.getElementById('employees-body');
+    tbody.innerHTML = '';
+    
+    employees.forEach(employee => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${employee.name}</td>
+            <td>${getRoleName(employee.role)}</td>
+            <td>${formatCurrency(employee.salary)}</td>
+            <td>${formatDate(employee.startDate)}</td>
+            <td>${employee.phone || '-'}</td>
+            <td>
+                <div class="employee-actions">
+                    <button onclick="editEmployee('${employee.id}')" class="edit-employee-btn">تعديل</button>
+                    <button onclick="deleteEmployee('${employee.id}')" class="delete-employee-btn">حذف</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function updateEmployeesSummary() {
+    const totalEmployees = employees.length;
+    const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
+    const averageSalary = totalEmployees > 0 ? totalSalaries / totalEmployees : 0;
+    
+    document.getElementById('total-employees').textContent = totalEmployees;
+    document.getElementById('total-salaries').textContent = formatCurrency(totalSalaries);
+    document.getElementById('average-salary').textContent = formatCurrency(averageSalary);
+}
+
+function getRoleName(role) {
+    const roleNames = {
+        'programmer': 'مبرمجة',
+        'blogger': 'مدونة',
+        'teacher': 'معلمة لغة',
+        'designer': 'مصممة',
+        'marketer': 'مسوقة',
+        'manager': 'مديرة',
+        'other': 'أخرى'
+    };
+    return roleNames[role] || role;
+}
+
+async function editEmployee(id) {
+    showMessage('ميزة تعديل الموظفة ستكون متاحة قريباً', 'info');
+}
+
+async function deleteEmployee(id) {
+    if (confirm('هل أنت متأكد من حذف بيانات هذه الموظفة؟')) {
+        try {
+            const response = await fetch(`/api/employees/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                showMessage('تم حذف الموظفة بنجاح', 'success');
+                loadEmployees();
+            } else {
+                throw new Error('فشل في حذف الموظفة');
+            }
+        } catch (error) {
+            showMessage('حدث خطأ في حذف الموظفة: ' + error.message, 'error');
+            console.error('Employee delete error:', error);
+        }
+    }
+}
+
+// Placeholder functions for edit/delete transactions (can be implemented later)
 function editTransaction(id) {
     showMessage('ميزة التعديل ستكون متاحة قريباً', 'info');
 }

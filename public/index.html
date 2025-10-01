@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -20,6 +19,7 @@
                     <button onclick="showSection('dashboard')" class="nav-btn active">لوحة التحكم</button>
                     <button onclick="showSection('add-transaction')" class="nav-btn">إضافة معاملة</button>
                     <button onclick="showSection('transactions')" class="nav-btn">المعاملات</button>
+                    <button onclick="showSection('employees')" class="nav-btn">الموظفات</button>
                     <button onclick="showSection('reports')" class="nav-btn">التقارير</button>
                 </nav>
             </header>
@@ -27,7 +27,7 @@
         <!-- Dashboard Section -->
         <section id="dashboard" class="section active">
             <h2 id="dashboard-title">لوحة التحكم العامة</h2>
-            
+
             <!-- KPI Cards -->
             <div class="kpi-grid">
                 <div class="kpi-card revenue">
@@ -39,7 +39,7 @@
                         <div class="progress-bar" style="width: 75%"></div>
                     </div>
                 </div>
-                
+
                 <div class="kpi-card profit">
                     <div class="achievement-badge">📈</div>
                     <h3>صافي الربح</h3>
@@ -49,7 +49,7 @@
                         <div class="progress-bar" style="width: 60%"></div>
                     </div>
                 </div>
-                
+
                 <div class="kpi-card students">
                     <div class="achievement-badge">🎓</div>
                     <h3>عدد الطلاب</h3>
@@ -59,7 +59,7 @@
                         <div class="progress-bar" style="width: 85%"></div>
                     </div>
                 </div>
-                
+
                 <div class="kpi-card clients">
                     <div class="achievement-badge">👥</div>
                     <h3>عدد العملاء</h3>
@@ -69,7 +69,7 @@
                         <div class="progress-bar" style="width: 75%"></div>
                     </div>
                 </div>
-                
+
                 <div class="kpi-card forecast">
                     <div class="achievement-badge">🚀</div>
                     <h3>توقع الشهر القادم</h3>
@@ -87,17 +87,17 @@
                     <h3>الإيرادات والأرباح الشهرية</h3>
                     <canvas id="revenueChart"></canvas>
                 </div>
-                
+
                 <div class="chart-container">
                     <h3>توزيع الإيرادات حسب الأعمال</h3>
                     <canvas id="businessChart"></canvas>
                 </div>
-                
+
                 <div class="chart-container">
                     <h3>الطلاب والعملاء الشهري</h3>
                     <canvas id="clientsChart"></canvas>
                 </div>
-                
+
                 <div class="chart-container">
                     <h3>المصاريف مقابل الإيرادات</h3>
                     <canvas id="expensesChart"></canvas>
@@ -113,7 +113,7 @@
                     <label for="date">التاريخ:</label>
                     <input type="datetime-local" id="date" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="business">اسم العمل/البراند:</label>
                     <select id="business" required>
@@ -124,7 +124,7 @@
                         <option value="other">أخرى</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="type">نوع المعاملة:</label>
                     <select id="type" required onchange="toggleFields()">
@@ -133,7 +133,7 @@
                         <option value="expense">مصاريف</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="category">الفئة:</label>
                     <select id="category" required>
@@ -148,32 +148,32 @@
                         <option value="other">أخرى</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="amount">المبلغ (ريال):</label>
                     <input type="number" id="amount" step="0.01" required>
                 </div>
-                
+
                 <div class="form-group" id="cost-group">
                     <label for="cost">التكلفة المباشرة (ريال):</label>
                     <input type="number" id="cost" step="0.01">
                 </div>
-                
+
                 <div class="form-group" id="students-group">
                     <label for="students">عدد الطلاب:</label>
                     <input type="number" id="students" min="0">
                 </div>
-                
+
                 <div class="form-group" id="clients-group">
                     <label for="clients">عدد العملاء:</label>
                     <input type="number" id="clients" min="0">
                 </div>
-                
+
                 <div class="form-group full-width">
                     <label for="notes">ملاحظات:</label>
                     <textarea id="notes" rows="3"></textarea>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="payment-method">طريقة الدفع:</label>
                     <select id="payment-method">
@@ -183,7 +183,7 @@
                         <option value="online">دفع إلكتروني</option>
                     </select>
                 </div>
-                
+
                 <button type="submit" class="submit-btn">حفظ المعاملة</button>
             </form>
         </section>
@@ -191,7 +191,7 @@
         <!-- Transactions Section -->
         <section id="transactions" class="section">
             <h2>جميع المعاملات</h2>
-            
+
             <div class="filters">
                 <input type="date" id="filter-start" placeholder="من تاريخ">
                 <input type="date" id="filter-end" placeholder="إلى تاريخ">
@@ -210,7 +210,7 @@
                 <button onclick="applyFilters()">تطبيق الفلاتر</button>
                 <button onclick="clearFilters()">مسح الفلاتر</button>
             </div>
-            
+
             <div class="table-container">
                 <table id="transactions-table">
                     <thead>
@@ -231,17 +231,118 @@
             </div>
         </section>
 
+        <!-- Employees Section -->
+        <section id="employees" class="section">
+            <h2>إدارة الموظفات</h2>
+
+            <div class="form-container">
+                <h3>إضافة موظفة جديدة</h3>
+                <form id="employee-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="employee-name">الاسم:</label>
+                            <input type="text" id="employee-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="employee-role">المنصب:</label>
+                            <select id="employee-role" name="role" required>
+                                <option value="">اختر المنصب</option>
+                                <option value="programmer">مبرمجة</option>
+                                <option value="blogger">مدونة</option>
+                                <option value="teacher">معلمة لغة</option>
+                                <option value="designer">مصممة</option>
+                                <option value="marketer">مسوقة</option>
+                                <option value="manager">مديرة</option>
+                                <option value="other">أخرى</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="employee-salary">الراتب (شهري):</label>
+                            <input type="number" id="employee-salary" name="salary" min="0" step="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="employee-phone">رقم الهاتف:</label>
+                            <input type="tel" id="employee-phone" name="phone">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="employee-email">البريد الإلكتروني:</label>
+                            <input type="email" id="employee-email" name="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="employee-start-date">تاريخ البداية:</label>
+                            <input type="date" id="employee-start-date" name="startDate" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group full-width">
+                            <label for="employee-notes">ملاحظات:</label>
+                            <textarea id="employee-notes" name="notes" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">إضافة موظفة</button>
+                </form>
+            </div>
+
+            <div class="employees-list">
+                <h3>قائمة الموظفات</h3>
+                <div class="table-container">
+                    <table class="employees-table">
+                        <thead>
+                            <tr>
+                                <th>الاسم</th>
+                                <th>المنصب</th>
+                                <th>الراتب</th>
+                                <th>تاريخ البداية</th>
+                                <th>رقم الهاتف</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employees-body">
+                            <!-- Employees will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="employees-summary">
+                <h3>ملخص الموظفات</h3>
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="summary-title">إجمالي الموظفات</div>
+                        <div class="summary-value" id="total-employees">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-title">إجمالي الرواتب الشهرية</div>
+                        <div class="summary-value" id="total-salaries">0 ريال</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-title">متوسط الراتب</div>
+                        <div class="summary-value" id="average-salary">0 ريال</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
         <!-- Reports Section -->
         <section id="reports" class="section">
             <h2>التقارير والتصدير</h2>
-            
+
             <div class="report-controls">
                 <select id="report-period">
                     <option value="monthly">تقرير شهري</option>
                     <option value="quarterly">تقرير ربع سنوي</option>
                     <option value="yearly">تقرير سنوي</option>
                 </select>
-                
+
                 <select id="report-business">
                     <option value="">جميع الأعمال</option>
                     <option value="abayat_shop">محل العبايات</option>
@@ -249,17 +350,17 @@
                     <option value="consultation">الاستشارات</option>
                     <option value="other">أخرى</option>
                 </select>
-                
+
                 <button onclick="generateReport()">إنشاء التقرير</button>
                 <button onclick="exportToCSV()">تصدير CSV</button>
             </div>
-            
+
             <div id="report-content" class="report-content">
                 <!-- Generated report will appear here -->
             </div>
         </section>
     </div>
-        
+
         <!-- Projects Sidebar -->
         <div class="projects-sidebar">
             <div class="sidebar-header">

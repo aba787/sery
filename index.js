@@ -4,13 +4,9 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Import Firebase Admin SDK for server-side operations
-const admin = require('firebase-admin');
-
-// Initialize Firebase Admin (you'll need to add service account key)
-// For now, we'll use the client SDK approach
+// Use Firebase client SDK for simplicity
 const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, addDoc, getDocs, query, where, orderBy, Timestamp } = require('firebase/firestore');
+const { getFirestore, collection, addDoc, getDocs, query, where, orderBy, Timestamp, deleteDoc, doc, updateDoc } = require('firebase/firestore');
 
 const firebaseConfig = {
   apiKey: "AIzaSyAM_nhmybRetSdWJASTFz_Mq2OxVmMFD2A",
@@ -33,6 +29,70 @@ app.use(express.static('public'));
 // Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// API Routes for employees
+app.post('/api/employees', async (req, res) => {
+  try {
+    const employee = req.body;
+    employee.createdAt = Timestamp.now();
+    
+    const docRef = await addDoc(collection(db, 'employees'), employee);
+    employee.id = docRef.id;
+    
+    res.json({ success: true, employee });
+  } catch (error) {
+    console.error('Error adding employee:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/employees', async (req, res) => {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'employees'));
+    const employees = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      employees.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
+      });
+    });
+    
+    res.json(employees);
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/employees/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    await updateDoc(doc(db, 'employees', id), updates);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating employee:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/employees/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await deleteDoc(doc(db, 'employees', id));
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting employee:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // API Routes for transactions

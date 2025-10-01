@@ -1,4 +1,3 @@
-
 // Global variables
 let currentTransactions = [];
 let monthlyAggregates = [];
@@ -16,21 +15,21 @@ let firebaseConnected = false;
 document.addEventListener('DOMContentLoaded', function() {
     // Set default date to now
     document.getElementById('date').value = new Date().toISOString().slice(0, 16);
-    
+
     // Check for monthly reset
     checkAndResetMonthlyIncome();
-    
+
     // Load initial data
     loadProjects();
     loadDashboard();
     loadTransactions();
     loadCompanyProjects();
-    
+
     // Set up form submission
     document.getElementById('transaction-form').addEventListener('submit', handleTransactionSubmit);
     document.getElementById('project-form').addEventListener('submit', handleProjectSubmit);
     document.getElementById('employee-form').addEventListener('submit', handleEmployeeSubmit);
-    
+
     // Toggle fields based on transaction type
     toggleFields();
 });
@@ -41,18 +40,18 @@ function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
     });
-    
+
     // Remove active class from all nav buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
-    
+
     // Show selected section
     document.getElementById(sectionId).classList.add('active');
-    
+
     // Add active class to clicked button
     event.target.classList.add('active');
-    
+
     // Load section-specific data
     if (sectionId === 'dashboard') {
         loadDashboard();
@@ -66,7 +65,7 @@ function showSection(sectionId) {
 // Handle transaction form submission
 async function handleTransactionSubmit(event) {
     event.preventDefault();
-    
+
     const formData = new FormData(event.target);
     const transaction = {
         date: document.getElementById('date').value,
@@ -80,7 +79,7 @@ async function handleTransactionSubmit(event) {
         notes: document.getElementById('notes').value,
         paymentMethod: document.getElementById('payment-method').value
     };
-    
+
     try {
         const response = await fetch('/api/transactions', {
             method: 'POST',
@@ -89,13 +88,13 @@ async function handleTransactionSubmit(event) {
             },
             body: JSON.stringify(transaction)
         });
-        
+
         if (response.ok) {
             const result = await response.json();
             showMessage('تم حفظ المعاملة بنجاح في قاعدة البيانات!', 'success');
             event.target.reset();
             document.getElementById('date').value = new Date().toISOString().slice(0, 16);
-            
+
             // Reload data with a slight delay to allow Firebase to process
             setTimeout(() => {
                 loadDashboard();
@@ -116,7 +115,7 @@ function toggleFields() {
     const studentsGroup = document.getElementById('students-group');
     const clientsGroup = document.getElementById('clients-group');
     const costGroup = document.getElementById('cost-group');
-    
+
     if (type === 'revenue') {
         studentsGroup.style.display = 'flex';
         clientsGroup.style.display = 'flex';
@@ -135,7 +134,7 @@ function toggleFields() {
 async function loadDashboard() {
     try {
         console.log('Loading dashboard data from Firebase...');
-        
+
         // Load monthly aggregates
         const aggregatesResponse = await fetch('/api/monthly-aggregates');
         if (aggregatesResponse.ok) {
@@ -146,7 +145,7 @@ async function loadDashboard() {
             monthlyAggregates = [];
             firebaseConnected = false;
         }
-        
+
         // Load forecast
         const forecastResponse = await fetch('/api/forecast');
         if (forecastResponse.ok) {
@@ -155,18 +154,18 @@ async function loadDashboard() {
         } else {
             forecastData = { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' };
         }
-        
+
         // Update KPI cards
         updateKPICards();
-        
+
         // Update charts
         updateCharts();
-        
+
         // Show connection status
         if (firebaseConnected) {
             showMessage('تم الاتصال بقاعدة البيانات بنجاح', 'success');
         }
-        
+
     } catch (error) {
         console.error('Error loading dashboard:', error);
         firebaseConnected = false;
@@ -182,13 +181,13 @@ async function loadDashboard() {
 // Update KPI cards
 function updateKPICards() {
     const currentMonth = new Date();
-    
+
     // Filter aggregates by selected project if any
     let filteredAggregates = monthlyAggregates;
     if (selectedProject) {
         filteredAggregates = monthlyAggregates.filter(agg => agg.businessId === selectedProject);
     }
-    
+
     // Aggregate data across all businesses for current month if no project selected
     let currentMonthData;
     if (selectedProject) {
@@ -202,7 +201,7 @@ function updateKPICards() {
             agg.year === currentMonth.getFullYear() && 
             agg.month === currentMonth.getMonth() + 1
         );
-        
+
         if (currentMonthAggregates.length > 0) {
             currentMonthData = currentMonthAggregates.reduce((total, agg) => ({
                 total_revenue: total.total_revenue + agg.total_revenue,
@@ -217,9 +216,9 @@ function updateKPICards() {
             });
         }
     }
-    
+
     const lastMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1);
-    
+
     let lastMonthData;
     if (selectedProject) {
         lastMonthData = filteredAggregates.find(agg => 
@@ -232,7 +231,7 @@ function updateKPICards() {
             agg.year === lastMonth.getFullYear() && 
             agg.month === lastMonth.getMonth() + 1
         );
-        
+
         if (lastMonthAggregates.length > 0) {
             lastMonthData = lastMonthAggregates.reduce((total, agg) => ({
                 total_revenue: total.total_revenue + agg.total_revenue,
@@ -247,12 +246,12 @@ function updateKPICards() {
             });
         }
     }
-    
+
     // Current revenue and yearly income
     const currentRevenue = currentMonthData ? currentMonthData.total_revenue : 0;
     const lastRevenue = lastMonthData ? lastMonthData.total_revenue : 0;
     const revenueChange = lastRevenue > 0 ? ((currentRevenue - lastRevenue) / lastRevenue * 100) : 0;
-    
+
     // Calculate yearly income for selected project or all projects
     let yearlyIncome = 0;
     if (selectedProject) {
@@ -263,20 +262,20 @@ function updateKPICards() {
             yearlyIncome += getProjectYearlyIncome(project.id);
         });
     }
-    
+
     document.getElementById('current-revenue').textContent = formatCurrency(currentRevenue);
     document.getElementById('revenue-change').textContent = `السنوي: ${formatCurrency(yearlyIncome)}`;
     document.getElementById('revenue-change').className = 'kpi-change yearly-income';
-    
+
     // Current profit
     const currentProfit = currentMonthData ? currentMonthData.net_profit : 0;
     const lastProfit = lastMonthData ? lastMonthData.net_profit : 0;
     const profitChange = lastProfit > 0 ? ((currentProfit - lastProfit) / lastProfit * 100) : 0;
-    
+
     document.getElementById('current-profit').textContent = formatCurrency(currentProfit);
     document.getElementById('profit-change').textContent = formatPercentage(profitChange);
     document.getElementById('profit-change').className = 'kpi-change ' + (profitChange >= 0 ? 'positive' : 'negative');
-    
+
     // Current students and clients
     const currentStudents = currentMonthData ? currentMonthData.students_count : 0;
     const currentClients = currentMonthData ? currentMonthData.clients_count || 0 : 0;
@@ -284,15 +283,15 @@ function updateKPICards() {
     const lastClients = lastMonthData ? lastMonthData.clients_count || 0 : 0;
     const studentsChange = lastStudents > 0 ? ((currentStudents - lastStudents) / lastStudents * 100) : 0;
     const clientsChange = lastClients > 0 ? ((currentClients - lastClients) / lastClients * 100) : 0;
-    
+
     document.getElementById('current-students').textContent = currentStudents;
     document.getElementById('students-change').textContent = formatPercentage(studentsChange);
     document.getElementById('students-change').className = 'kpi-change ' + (studentsChange >= 0 ? 'positive' : 'negative');
-    
+
     document.getElementById('current-clients').textContent = currentClients;
     document.getElementById('clients-change').textContent = formatPercentage(clientsChange);
     document.getElementById('clients-change').className = 'kpi-change ' + (clientsChange >= 0 ? 'positive' : 'negative');
-    
+
     // Forecast
     document.getElementById('forecast-profit').textContent = formatCurrency(forecastData.forecast_profit || 0);
     document.getElementById('forecast-confidence').textContent = getConfidenceText(forecastData.confidence);
@@ -303,24 +302,24 @@ function checkAndResetMonthlyIncome() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     // Get last check date from localStorage
     const lastCheck = localStorage.getItem('lastMonthlyCheck');
     const lastCheckDate = lastCheck ? new Date(lastCheck) : null;
-    
+
     // If it's a new month or first time running
     if (!lastCheckDate || 
         lastCheckDate.getMonth() !== currentMonth || 
         lastCheckDate.getFullYear() !== currentYear) {
-        
+
         // If this is not the first run, transfer monthly income to yearly
         if (lastCheckDate) {
             transferMonthlyToYearly();
         }
-        
+
         // Update last check date
         localStorage.setItem('lastMonthlyCheck', now.toISOString());
-        
+
         // Initialize yearly incomes if not exists
         initializeYearlyIncomes();
     }
@@ -330,16 +329,16 @@ function checkAndResetMonthlyIncome() {
 function transferMonthlyToYearly() {
     const yearlyIncomes = getYearlyIncomes();
     const currentYear = new Date().getFullYear();
-    
+
     // Get previous month's aggregates
     const previousMonth = new Date();
     previousMonth.setMonth(previousMonth.getMonth() - 1);
-    
+
     const prevMonthAggregates = monthlyAggregates.filter(agg => 
         agg.year === previousMonth.getFullYear() && 
         agg.month === previousMonth.getMonth() + 1
     );
-    
+
     // Add previous month's revenue to yearly totals
     prevMonthAggregates.forEach(agg => {
         const projectKey = `${agg.businessId}_${currentYear}`;
@@ -348,10 +347,10 @@ function transferMonthlyToYearly() {
         }
         yearlyIncomes[projectKey] += agg.total_revenue;
     });
-    
+
     // Save updated yearly incomes
     localStorage.setItem('yearlyIncomes', JSON.stringify(yearlyIncomes));
-    
+
     console.log('Monthly income transferred to yearly totals');
 }
 
@@ -377,19 +376,19 @@ function getProjectYearlyIncome(projectId) {
     const currentYear = new Date().getFullYear();
     const yearlyIncomes = getYearlyIncomes();
     const projectKey = `${projectId}_${currentYear}`;
-    
+
     // Get stored yearly income
     const storedYearly = yearlyIncomes[projectKey] || 0;
-    
+
     // Get current year's monthly totals (excluding current month if we're tracking separately)
     const currentYearAggregates = monthlyAggregates.filter(agg => 
         agg.businessId === projectId && 
         agg.year === currentYear &&
         agg.month < new Date().getMonth() + 1 // Only completed months
     );
-    
+
     const monthlyTotal = currentYearAggregates.reduce((sum, agg) => sum + agg.total_revenue, 0);
-    
+
     return storedYearly + monthlyTotal;
 }
 
@@ -397,13 +396,13 @@ function getProjectYearlyIncome(projectId) {
 function getProjectMonthlyIncome(projectId) {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
-    
+
     const currentMonthAggregate = monthlyAggregates.find(agg => 
         agg.businessId === projectId && 
         agg.year === currentYear && 
         agg.month === currentMonth
     );
-    
+
     return currentMonthAggregate ? currentMonthAggregate.total_revenue : 0;
 }
 
@@ -416,7 +415,7 @@ function loadProjects() {
     } else {
         projects = JSON.parse(localStorage.getItem('projects'));
     }
-    
+
     displaySidebarProjects();
     updateBusinessOptions();
 }
@@ -425,13 +424,13 @@ function loadProjects() {
 function displaySidebarProjects() {
     const sidebarProjects = document.getElementById('sidebar-projects');
     sidebarProjects.innerHTML = '';
-    
+
     projects.forEach(project => {
         // Calculate project stats
         const yearlyIncome = getProjectYearlyIncome(project.id);
         const monthlyIncome = getProjectMonthlyIncome(project.id);
         const totalTransactions = currentTransactions.filter(t => t.businessId === project.id).length;
-        
+
         const projectElement = document.createElement('div');
         projectElement.className = 'sidebar-project';
         if (selectedProject === project.id) {
@@ -439,7 +438,7 @@ function displaySidebarProjects() {
         }
         projectElement.style.setProperty('--project-color', project.color);
         projectElement.style.setProperty('--project-color-transparent', project.color + '40');
-        
+
         projectElement.innerHTML = `
             <div class="sidebar-project-name">${project.name}</div>
             <div class="sidebar-project-stats">
@@ -452,11 +451,11 @@ function displaySidebarProjects() {
                 <div class="sidebar-project-count">${totalTransactions} معاملة</div>
             </div>
         `;
-        
+
         projectElement.addEventListener('click', () => {
             selectProject(project.id);
         });
-        
+
         sidebarProjects.appendChild(projectElement);
     });
 }
@@ -475,43 +474,43 @@ function closeAddProjectModal() {
 // Handle project form submission
 async function handleProjectSubmit(event) {
     event.preventDefault();
-    
+
     const projectData = {
         id: document.getElementById('project-id').value,
         name: document.getElementById('project-name').value,
         description: document.getElementById('project-description').value,
         color: document.getElementById('project-color').value
     };
-    
+
     // Check if project ID already exists
     if (projects.some(p => p.id === projectData.id)) {
         showMessage('معرف المشروع موجود بالفعل', 'error');
         return;
     }
-    
+
     projects.push(projectData);
     localStorage.setItem('projects', JSON.stringify(projects));
-    
+
     displaySidebarProjects();
     updateBusinessOptions();
     closeAddProjectModal();
-    
+
     showMessage('تم إضافة المشروع بنجاح!', 'success');
 }
 
 // Update business options in forms
 function updateBusinessOptions() {
     const businessSelects = document.querySelectorAll('#business, #filter-business, #report-business');
-    
+
     businessSelects.forEach(select => {
         // Save current value
         const currentValue = select.value;
-        
+
         // Clear options except "اختر العمل" or "جميع الأعمال"
         const firstOption = select.firstElementChild;
         select.innerHTML = '';
         select.appendChild(firstOption);
-        
+
         // Add project options
         projects.forEach(project => {
             const option = document.createElement('option');
@@ -519,7 +518,7 @@ function updateBusinessOptions() {
             option.textContent = project.name;
             select.appendChild(option);
         });
-        
+
         // Restore value if it still exists
         if (currentValue && projects.some(p => p.id === currentValue)) {
             select.value = currentValue;
@@ -531,11 +530,11 @@ function updateBusinessOptions() {
 function selectProject(projectId) {
     selectedProject = projectId;
     isShowingAllProjects = false;
-    
+
     const project = projects.find(p => p.id === projectId);
     if (project) {
         document.getElementById('dashboard-title').textContent = `لوحة التحكم - ${project.name}`;
-        
+
         // Update navigation to show we're in project mode
         document.querySelectorAll('.nav-btn').forEach(btn => {
             const originalText = btn.textContent;
@@ -545,11 +544,11 @@ function selectProject(projectId) {
             btn.textContent = btn.dataset.originalText + ` - ${project.name}`;
         });
     }
-    
+
     displaySidebarProjects();
     loadDashboard();
     loadTransactions();
-    
+
     showMessage(`تم اختيار مشروع ${project.name}`, 'success');
 }
 
@@ -557,20 +556,20 @@ function selectProject(projectId) {
 function showAllProjects() {
     selectedProject = null;
     isShowingAllProjects = true;
-    
+
     document.getElementById('dashboard-title').textContent = 'لوحة التحكم العامة';
-    
+
     // Reset navigation text
     document.querySelectorAll('.nav-btn').forEach(btn => {
         if (btn.dataset.originalText) {
             btn.textContent = btn.dataset.originalText;
         }
     });
-    
+
     displaySidebarProjects();
     loadDashboard();
     loadTransactions();
-    
+
     showMessage('تم عرض جميع المشاريع', 'success');
 }
 
@@ -584,16 +583,16 @@ function deleteProject(projectId) {
     if (confirm('هل أنت متأكد من حذف هذا المشروع؟ سيتم حذف جميع البيانات المرتبطة به.')) {
         projects = projects.filter(p => p.id !== projectId);
         localStorage.setItem('projects', JSON.stringify(projects));
-        
+
         // If deleted project was selected, show all projects
         if (selectedProject === projectId) {
             showAllProjects();
         } else {
             displaySidebarProjects();
         }
-        
+
         updateBusinessOptions();
-        
+
         showMessage('تم حذف المشروع بنجاح', 'success');
     }
 }
@@ -609,12 +608,12 @@ function updateCharts() {
 // Revenue and profit chart
 function updateRevenueChart() {
     const ctx = document.getElementById('revenueChart').getContext('2d');
-    
+
     // Destroy existing chart if it exists
     if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
         window.revenueChart.destroy();
     }
-    
+
     // Filter data by selected project if any
     let chartData = monthlyAggregates;
     if (selectedProject) {
@@ -637,11 +636,11 @@ function updateRevenueChart() {
         });
         chartData = Object.values(monthlyTotals).sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
     }
-    
+
     const labels = chartData.map(agg => `${agg.year}/${agg.month}`);
     const revenueData = chartData.map(agg => agg.total_revenue);
     const profitData = chartData.map(agg => agg.net_profit);
-    
+
     window.revenueChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -690,18 +689,18 @@ function updateRevenueChart() {
 // Business distribution chart
 function updateBusinessChart() {
     const ctx = document.getElementById('businessChart').getContext('2d');
-    
+
     if (window.businessChart && typeof window.businessChart.destroy === 'function') {
         window.businessChart.destroy();
     }
-    
+
     // If project is selected, show only that project
     if (selectedProject) {
         const project = projects.find(p => p.id === selectedProject);
         const projectRevenue = monthlyAggregates
             .filter(agg => agg.businessId === selectedProject)
             .reduce((sum, agg) => sum + agg.total_revenue, 0);
-            
+
         window.businessChart = new Chart(ctx, {
             type: 'pie',
             data: {
@@ -726,7 +725,7 @@ function updateBusinessChart() {
         });
         return;
     }
-    
+
     // Aggregate revenue by business
     const businessRevenue = {};
     monthlyAggregates.forEach(agg => {
@@ -735,10 +734,10 @@ function updateBusinessChart() {
         }
         businessRevenue[agg.businessId] += agg.total_revenue;
     });
-    
+
     const labels = Object.keys(businessRevenue).map(getBusinessName);
     const data = Object.values(businessRevenue);
-    
+
     window.businessChart = new Chart(ctx, {
         type: 'pie',
         data: {
@@ -774,15 +773,15 @@ function updateBusinessChart() {
 // Clients chart
 function updateClientsChart() {
     const ctx = document.getElementById('clientsChart').getContext('2d');
-    
+
     if (window.clientsChart && typeof window.clientsChart.destroy === 'function') {
         window.clientsChart.destroy();
     }
-    
+
     const labels = monthlyAggregates.map(agg => `${agg.year}/${agg.month}`);
     const studentsData = monthlyAggregates.map(agg => agg.students_count);
     const clientsData = monthlyAggregates.map(agg => agg.clients_count || 0);
-    
+
     window.clientsChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -818,15 +817,15 @@ function updateClientsChart() {
 // Expenses vs Revenue chart
 function updateExpensesChart() {
     const ctx = document.getElementById('expensesChart').getContext('2d');
-    
+
     if (window.expensesChart && typeof window.expensesChart.destroy === 'function') {
         window.expensesChart.destroy();
     }
-    
+
     const labels = monthlyAggregates.map(agg => `${agg.year}/${agg.month}`);
     const revenueData = monthlyAggregates.map(agg => agg.total_revenue);
     const expensesData = monthlyAggregates.map(agg => agg.total_expenses);
-    
+
     window.expensesChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -890,7 +889,7 @@ async function loadTransactions() {
 function displayTransactions(transactions) {
     const tbody = document.getElementById('transactions-body');
     tbody.innerHTML = '';
-    
+
     transactions.reverse().forEach(transaction => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -916,25 +915,25 @@ function applyFilters() {
     const endDate = document.getElementById('filter-end').value;
     const business = document.getElementById('filter-business').value;
     const type = document.getElementById('filter-type').value;
-    
+
     let filtered = [...currentTransactions];
-    
+
     if (startDate) {
         filtered = filtered.filter(t => new Date(t.date) >= new Date(startDate));
     }
-    
+
     if (endDate) {
         filtered = filtered.filter(t => new Date(t.date) <= new Date(endDate));
     }
-    
+
     if (business) {
         filtered = filtered.filter(t => t.businessId === business);
     }
-    
+
     if (type) {
         filtered = filtered.filter(t => t.type === type);
     }
-    
+
     displayTransactions(filtered);
 }
 
@@ -963,7 +962,7 @@ function exportToCSV() {
             `"${t.notes || ''}"`
         ].join(','))
     ].join('\n');
-    
+
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -975,13 +974,13 @@ function exportToCSV() {
 function generateReport() {
     const period = document.getElementById('report-period').value;
     const business = document.getElementById('report-business').value;
-    
+
     let filteredAggregates = [...monthlyAggregates];
-    
+
     if (business) {
         filteredAggregates = filteredAggregates.filter(agg => agg.businessId === business);
     }
-    
+
     const reportContent = document.getElementById('report-content');
     reportContent.innerHTML = generateReportHTML(filteredAggregates, period);
 }
@@ -991,12 +990,12 @@ function generateReportHTML(aggregates, period) {
     if (aggregates.length === 0) {
         return '<p>لا توجد بيانات للعرض</p>';
     }
-    
+
     const totalRevenue = aggregates.reduce((sum, agg) => sum + agg.total_revenue, 0);
     const totalExpenses = aggregates.reduce((sum, agg) => sum + agg.total_expenses, 0);
     const totalProfit = totalRevenue - totalExpenses;
     const totalStudents = aggregates.reduce((sum, agg) => sum + agg.students_count, 0);
-    
+
     return `
         <h3>تقرير ${period === 'monthly' ? 'شهري' : period === 'quarterly' ? 'ربع سنوي' : 'سنوي'}</h3>
         <div class="report-summary">
@@ -1016,7 +1015,7 @@ function generateReportHTML(aggregates, period) {
                 <strong>متوسط الإيراد لكل طالب:</strong> ${formatCurrency(totalStudents > 0 ? totalRevenue / totalStudents : 0)}
             </div>
         </div>
-        
+
         <table class="report-table">
             <thead>
                 <tr>
@@ -1094,11 +1093,11 @@ function showMessage(message, type) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
     messageDiv.textContent = message;
-    
+
     // Find a suitable container - try main-content first, then body
     const container = document.querySelector('.main-content') || document.body;
     const header = document.querySelector('header');
-    
+
     if (container && header) {
         container.insertBefore(messageDiv, header.nextSibling);
     } else if (container) {
@@ -1107,7 +1106,7 @@ function showMessage(message, type) {
         // Fallback: just append to body
         document.body.appendChild(messageDiv);
     }
-    
+
     setTimeout(() => {
         if (messageDiv.parentNode) {
             messageDiv.remove();
@@ -1118,7 +1117,7 @@ function showMessage(message, type) {
 // Employee management functions
 async function handleEmployeeSubmit(event) {
     event.preventDefault();
-    
+
     const formData = new FormData(event.target);
     const employee = {
         name: formData.get('name'),
@@ -1130,7 +1129,7 @@ async function handleEmployeeSubmit(event) {
         notes: formData.get('notes'),
         status: 'active'
     };
-    
+
     try {
         const response = await fetch('/api/employees', {
             method: 'POST',
@@ -1139,7 +1138,7 @@ async function handleEmployeeSubmit(event) {
             },
             body: JSON.stringify(employee)
         });
-        
+
         if (response.ok) {
             showMessage('تم إضافة الموظفة بنجاح!', 'success');
             event.target.reset();
@@ -1175,7 +1174,7 @@ async function loadEmployees() {
 function displayEmployees() {
     const tbody = document.getElementById('employees-body');
     tbody.innerHTML = '';
-    
+
     employees.forEach(employee => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -1199,7 +1198,7 @@ function updateEmployeesSummary() {
     const totalEmployees = employees.length;
     const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
     const averageSalary = totalEmployees > 0 ? totalSalaries / totalEmployees : 0;
-    
+
     document.getElementById('total-employees').textContent = totalEmployees;
     document.getElementById('total-salaries').textContent = formatCurrency(totalSalaries);
     document.getElementById('average-salary').textContent = formatCurrency(averageSalary);
@@ -1228,7 +1227,7 @@ async function deleteEmployee(id) {
             const response = await fetch(`/api/employees/${id}`, {
                 method: 'DELETE'
             });
-            
+
             if (response.ok) {
                 showMessage('تم حذف الموظفة بنجاح', 'success');
                 loadEmployees();
@@ -1259,18 +1258,18 @@ function generateDepartmentReports() {
         'training': { name: 'قسم التدريب', employees: [], totalSalary: 0, projects: 0 },
         'other': { name: 'أقسام أخرى', employees: [], totalSalary: 0, projects: 0 }
     };
-    
+
     // Categorize employees
     employees.forEach(emp => {
         let dept = 'other';
         if (emp.role === 'programmer') dept = 'programming';
         else if (emp.role === 'blogger' || emp.role === 'marketer') dept = 'marketing';
         else if (emp.role === 'teacher') dept = 'training';
-        
+
         departments[dept].employees.push(emp);
         departments[dept].totalSalary += emp.salary;
     });
-    
+
     // Count projects per department
     companyProjects.forEach(project => {
         if (project.assignedEmployees) {
@@ -1280,12 +1279,12 @@ function generateDepartmentReports() {
                 if (emp.role === 'programmer') dept = 'programming';
                 else if (emp.role === 'blogger' || emp.role === 'marketer') dept = 'marketing';
                 else if (emp.role === 'teacher') dept = 'training';
-                
+
                 departments[dept].projects += 1 / projectEmployees.length; // Distribute project count
             });
         }
     });
-    
+
     console.log('Department reports generated:', departments);
     return departments;
 }
@@ -1305,11 +1304,11 @@ function updateCompanyStats() {
 function displayAdvancedEmployees() {
     const tbody = document.getElementById('advanced-employees-body');
     tbody.innerHTML = '';
-    
+
     employees.forEach(employee => {
         const performance = getEmployeePerformance(employee);
         const status = getEmployeeStatus(employee);
-        
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>
@@ -1377,7 +1376,7 @@ function updatePayrollSummary() {
 function updatePerformanceChart() {
     const ctx = document.getElementById('performanceChart');
     if (!ctx) return;
-    
+
     if (window.performanceChart && typeof window.performanceChart.destroy === 'function') {
         window.performanceChart.destroy();
     }
@@ -1427,12 +1426,12 @@ function calculateTeamGrowth() {
     // Calculate growth based on new hires this month
     const thisMonth = new Date().getMonth();
     const thisYear = new Date().getFullYear();
-    
+
     const newHires = employees.filter(emp => {
         const startDate = new Date(emp.startDate);
         return startDate.getMonth() === thisMonth && startDate.getFullYear() === thisYear;
     }).length;
-    
+
     return newHires;
 }
 
@@ -1447,10 +1446,10 @@ function getEmployeePerformance(employee) {
         'marketer': 10,
         'manager': 20
     };
-    
+
     const experience = Math.floor((new Date() - new Date(employee.startDate)) / (1000 * 60 * 60 * 24 * 30));
     const experienceBonus = Math.min(experience * 2, 20);
-    
+
     return Math.min(basePerformance + (roleBonus[employee.role] || 5) + experienceBonus, 100);
 }
 
@@ -1461,7 +1460,7 @@ function getEmployeeStatus(employee) {
         { class: 'vacation', text: 'في إجازة' },
         { class: 'inactive', text: 'غير نشطة' }
     ];
-    
+
     return statuses[0]; // Default to active
 }
 
@@ -1469,18 +1468,18 @@ function getEmployeeStatus(employee) {
 function applyEmployeeFilters() {
     const roleFilter = document.getElementById('role-filter').value;
     const statusFilter = document.getElementById('status-filter').value;
-    
+
     // Apply filters and refresh display
     let filteredEmployees = [...employees];
-    
+
     if (roleFilter) {
         filteredEmployees = filteredEmployees.filter(emp => emp.role === roleFilter);
     }
-    
+
     if (statusFilter) {
         // Filter by status when implemented
     }
-    
+
     showMessage(`تم تطبيق الفلاتر - ${filteredEmployees.length} موظفة`, 'success');
 }
 
@@ -1497,13 +1496,13 @@ function exportEmployeeData() {
             emp.email || ''
         ].join(','))
     ].join('\n');
-    
+
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `employees_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    
+
     showMessage('تم تصدير بيانات الموظفات بنجاح', 'success');
 }
 
@@ -1555,7 +1554,7 @@ function updateCompanyOverviewData() {
     const totalEmployees = employees.length;
     const totalProjects = projects.length;
     const monthlyCosts = employees.reduce((sum, emp) => sum + emp.salary, 0);
-    
+
     // Calculate expected revenue based on current month's performance
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
@@ -1564,7 +1563,7 @@ function updateCompanyOverviewData() {
     );
     const monthlyRevenue = currentMonthAggregates.reduce((sum, agg) => sum + agg.total_revenue, 0);
     const expectedRevenue = monthlyRevenue > 0 ? monthlyRevenue : monthlyCosts * 2.5; // 2.5x multiplier
-    
+
     // Update overview cards
     const elements = {
         'company-total-employees': totalEmployees,
@@ -1572,23 +1571,23 @@ function updateCompanyOverviewData() {
         'company-monthly-costs': formatCurrency(monthlyCosts),
         'company-expected-revenue': formatCurrency(expectedRevenue)
     };
-    
+
     Object.entries(elements).forEach(([id, value]) => {
         const element = document.getElementById(id);
         if (element) element.textContent = value;
     });
-    
+
     // Update quick action counts
     const quickElements = {
         'quick-employees-count': totalEmployees,
         'quick-projects-count': totalProjects
     };
-    
+
     Object.entries(quickElements).forEach(([id, value]) => {
         const element = document.getElementById(id);
         if (element) element.textContent = value;
     });
-    
+
     updateCompanyCharts();
 }
 
@@ -1599,11 +1598,11 @@ function updateCompanyCharts() {
         if (window.companyCostsChart) {
             window.companyCostsChart.destroy();
         }
-        
+
         const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
         const operationalCosts = totalSalaries * 0.3; // 30% of salaries
         const otherCosts = totalSalaries * 0.1; // 10% of salaries
-        
+
         window.companyCostsChart = new Chart(costsCtx, {
             type: 'doughnut',
             data: {
@@ -1627,21 +1626,21 @@ function updateCompanyCharts() {
             }
         });
     }
-    
+
     // Departments chart
     const deptCtx = document.getElementById('departmentsChart');
     if (deptCtx) {
         if (window.departmentsChart) {
             window.departmentsChart.destroy();
         }
-        
+
         const departments = {
             'التطوير': employees.filter(emp => emp.role === 'programmer').length,
             'التسويق': employees.filter(emp => emp.role === 'blogger' || emp.role === 'marketer').length,
             'التدريب': employees.filter(emp => emp.role === 'teacher').length,
             'أخرى': employees.filter(emp => !['programmer', 'blogger', 'marketer', 'teacher'].includes(emp.role)).length
         };
-        
+
         window.departmentsChart = new Chart(deptCtx, {
             type: 'bar',
             data: {
@@ -1688,27 +1687,27 @@ function loadCompanyFinance() {
     const totalBonuses = totalPayroll * 0.1; // 10% bonuses
     const operationalExpenses = totalPayroll * 0.3; // 30% operational expenses
     const netCost = totalPayroll + totalBonuses + operationalExpenses;
-    
+
     document.getElementById('total-monthly-payroll').textContent = formatCurrency(totalPayroll);
     document.getElementById('total-bonuses-month').textContent = formatCurrency(totalBonuses);
     document.getElementById('operational-expenses').textContent = formatCurrency(operationalExpenses);
     document.getElementById('net-company-cost').textContent = formatCurrency(netCost);
-    
+
     loadPayrollTable();
 }
 
 function loadPayrollTable() {
     const tbody = document.getElementById('payroll-table-body');
     if (!tbody) return;
-    
+
     tbody.innerHTML = '';
-    
+
     employees.forEach(employee => {
         const baseSalary = employee.salary;
         const bonus = baseSalary * 0.1; // 10% bonus
         const deductions = baseSalary * 0.05; // 5% deductions
         const netSalary = baseSalary + bonus - deductions;
-        
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${employee.name}</td>
@@ -1739,7 +1738,7 @@ function exportPayrollReport() {
             const bonus = baseSalary * 0.1;
             const deductions = baseSalary * 0.05;
             const netSalary = baseSalary + bonus - deductions;
-            
+
             return [
                 emp.name,
                 baseSalary,
@@ -1749,13 +1748,13 @@ function exportPayrollReport() {
             ].join(',');
         })
     ].join('\n');
-    
+
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `payroll_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    
+
     showMessage('تم تصدير تقرير الرواتب', 'success');
 }
 
@@ -1771,9 +1770,9 @@ function loadCompanyProjects() {
 function displayCompanyProjects() {
     const grid = document.getElementById('company-projects-grid');
     if (!grid) return;
-    
+
     grid.innerHTML = '';
-    
+
     if (companyProjects.length === 0) {
         grid.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: rgba(255,255,255,0.7);">
@@ -1783,20 +1782,20 @@ function displayCompanyProjects() {
         `;
         return;
     }
-    
+
     companyProjects.forEach(project => {
         const projectCard = document.createElement('div');
         projectCard.className = 'project-card';
         projectCard.style.setProperty('--project-color', project.color || '#10b981');
         projectCard.style.setProperty('--project-color-transparent', (project.color || '#10b981') + '40');
-        
+
         const assignedEmployees = employees.filter(emp => 
             project.assignedEmployees && project.assignedEmployees.includes(emp.id)
         );
-        
+
         const totalBudget = project.budget || 0;
         const usedBudget = totalBudget * (project.progress || 0) / 100;
-        
+
         projectCard.innerHTML = `
             <div class="project-header">
                 <div class="project-info">
@@ -1837,7 +1836,7 @@ function displayCompanyProjects() {
                 </small>
             </div>
         `;
-        
+
         grid.appendChild(projectCard);
     });
 }
@@ -1888,14 +1887,14 @@ function openCompanyProjectModal() {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
+
     document.getElementById('company-project-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const selectedEmployees = Array.from(document.getElementById('company-project-employees').selectedOptions).map(option => option.value);
-        
+
         const project = {
             id: Date.now().toString(),
             name: document.getElementById('company-project-name').value,
@@ -1908,14 +1907,14 @@ function openCompanyProjectModal() {
             status: 'active',
             createdAt: new Date().toISOString()
         };
-        
+
         companyProjects.push(project);
         localStorage.setItem('companyProjects', JSON.stringify(companyProjects));
-        
+
         closeCompanyProjectModal();
         displayCompanyProjects();
         updateCompanyOverviewData();
-        
+
         showMessage('تم إضافة مشروع الشركة بنجاح!', 'success');
     });
 }
@@ -1930,18 +1929,18 @@ function closeCompanyProjectModal() {
 function editCompanyProject(projectId) {
     const project = companyProjects.find(p => p.id === projectId);
     if (!project) return;
-    
+
     const newProgress = prompt(`تحديث تقدم المشروع "${project.name}" (0-100):`, project.progress || 0);
     if (newProgress !== null) {
         const progress = Math.max(0, Math.min(100, parseInt(newProgress) || 0));
         project.progress = progress;
-        
+
         if (progress === 100) {
             project.status = 'completed';
         } else if (progress > 0) {
             project.status = 'active';
         }
-        
+
         localStorage.setItem('companyProjects', JSON.stringify(companyProjects));
         displayCompanyProjects();
         showMessage('تم تحديث تقدم المشروع', 'success');
@@ -1962,7 +1961,7 @@ function deleteCompanyProject(projectId) {
 const originalShowSection = showSection;
 window.showSection = function(sectionId) {
     originalShowSection.call(this, sectionId);
-    
+
     if (sectionId === 'company-dashboard') {
         setTimeout(() => {
             loadCompanyOverview();

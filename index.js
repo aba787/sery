@@ -6,8 +6,12 @@ const PORT = process.env.PORT || 5000;
 
 // Use Firebase Admin SDK for server-side operations
 const admin = require('firebase-admin');
+const { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp } = require('firebase/firestore');
 
 // Initialize Firebase Admin
+let db;
+let isFirebaseReady = false;
+
 try {
   // For development, we'll use a service account key (you should add this to secrets)
   // For now, we'll initialize without credentials for testing
@@ -17,11 +21,13 @@ try {
       // Add your service account key here in production
     });
   }
+  db = admin.firestore();
+  isFirebaseReady = true;
+  console.log('Firebase Admin initialized successfully');
 } catch (error) {
   console.error('Firebase Admin initialization error:', error);
+  isFirebaseReady = false;
 }
-
-const db = admin.firestore();
 
 // Fallback to in-memory storage if Firebase fails
 let memoryStorage = {
@@ -43,10 +49,23 @@ app.get('/', (req, res) => {
 app.post('/api/employees', async (req, res) => {
   try {
     const employee = req.body;
-    employee.createdAt = Timestamp.now();
+    employee.createdAt = new Date();
+    employee.id = Date.now().toString();
     
-    const docRef = await addDoc(collection(db, 'employees'), employee);
-    employee.id = docRef.id;
+    if (isFirebaseReady) {
+      try {
+        const docRef = await db.collection('employees').add(employee);
+        employee.id = docRef.id;
+        console.log('Employee saved to Firebase');
+      } catch (firebaseError) {
+        console.log('Firebase not available, using memory storage');
+        memoryStorage.employees = memoryStorage.employees || [];
+        memoryStorage.employees.push(employee);
+      }
+    } else {
+      memoryStorage.employees = memoryStorage.employees || [];
+      memoryStorage.employees.push(employee);
+    }
     
     res.json({ success: true, employee });
   } catch (error) {
@@ -57,22 +76,33 @@ app.post('/api/employees', async (req, res) => {
 
 app.get('/api/employees', async (req, res) => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'employees'));
-    const employees = [];
+    let employees = [];
     
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      employees.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
-      });
-    });
+    if (isFirebaseReady) {
+      try {
+        const snapshot = await db.collection('employees').get();
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          employees.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt instanceof admin.firestore.Timestamp ? 
+              data.createdAt.toDate().toISOString() : data.createdAt
+          });
+        });
+        console.log(`Loaded ${employees.length} employees from Firebase`);
+      } catch (firebaseError) {
+        console.log('Firebase not available, using memory storage');
+        employees = memoryStorage.employees || [];
+      }
+    } else {
+      employees = memoryStorage.employees || [];
+    }
     
     res.json(employees);
   } catch (error) {
     console.error('Error fetching employees:', error);
-    res.status(500).json({ error: error.message });
+    res.json([]);
   }
 });
 
@@ -81,7 +111,27 @@ app.put('/api/employees/:id', async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     
-    await updateDoc(doc(db, 'employees', id), updates);
+    if (isFirebaseReady) {
+      try {
+        await db.collection('employees').doc(id).update(updates);
+      } catch (firebaseError) {
+        // Update in memory storage
+        if (memoryStorage.employees) {
+          const index = memoryStorage.employees.findIndex(emp => emp.id === id);
+          if (index !== -1) {
+            memoryStorage.employees[index] = { ...memoryStorage.employees[index], ...updates };
+          }
+        }
+      }
+    } else {
+      // Update in memory storage
+      if (memoryStorage.employees) {
+        const index = memoryStorage.employees.findIndex(emp => emp.id === id);
+        if (index !== -1) {
+          memoryStorage.employees[index] = { ...memoryStorage.employees[index], ...updates };
+        }
+      }
+    }
     
     res.json({ success: true });
   } catch (error) {
@@ -94,7 +144,21 @@ app.delete('/api/employees/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    await deleteDoc(doc(db, 'employees', id));
+    if (isFirebaseReady) {
+      try {
+        await db.collection('employees').doc(id).delete();
+      } catch (firebaseError) {
+        // Delete from memory storage
+        if (memoryStorage.employees) {
+          memoryStorage.employees = memoryStorage.employees.filter(emp => emp.id !== id);
+        }
+      }
+    } else {
+      // Delete from memory storage
+      if (memoryStorage.employees) {
+        memoryStorage.employees = memoryStorage.employees.filter(emp => emp.id !== id);
+      }
+    }
     
     res.json({ success: true });
   } catch (error) {

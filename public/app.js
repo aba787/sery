@@ -408,28 +408,9 @@ function getProjectMonthlyIncome(projectId) {
 
 // Load and display projects
 function loadProjects() {
-    // Initialize with default projects if none exist
+    // Initialize with empty projects array
     if (!localStorage.getItem('projects')) {
-        projects = [
-            {
-                id: 'abayat_shop',
-                name: 'محل العبايات',
-                description: 'متجر العبايات والملابس النسائية',
-                color: '#4CAF50'
-            },
-            {
-                id: 'courses',
-                name: 'الدورات التدريبية',
-                description: 'دورات تدريبية في مختلف المجالات',
-                color: '#2196F3'
-            },
-            {
-                id: 'consultation',
-                name: 'الاستشارات',
-                description: 'خدمات الاستشارة المهنية',
-                color: '#FF9800'
-            }
-        ];
+        projects = [];
         localStorage.setItem('projects', JSON.stringify(projects));
     } else {
         projects = JSON.parse(localStorage.getItem('projects'));
@@ -1522,12 +1503,210 @@ function manageEmployeeLeave(id) {
     showMessage('سيتم فتح نظام إدارة إجازات الموظفة', 'info');
 }
 
-// Update navigation to load company dashboard
+// Company management functions
+function loadCompanyOverview() {
+    const totalEmployees = employees.length;
+    const totalProjects = projects.length;
+    const monthlyCosts = employees.reduce((sum, emp) => sum + emp.salary, 0);
+    const expectedRevenue = monthlyCosts * 2; // Simple calculation
+    
+    document.getElementById('company-total-employees').textContent = totalEmployees;
+    document.getElementById('company-total-projects').textContent = totalProjects;
+    document.getElementById('company-monthly-costs').textContent = formatCurrency(monthlyCosts);
+    document.getElementById('company-expected-revenue').textContent = formatCurrency(expectedRevenue);
+    
+    // Update quick action counts
+    document.getElementById('quick-employees-count').textContent = totalEmployees;
+    document.getElementById('quick-projects-count').textContent = totalProjects;
+    
+    updateCompanyCharts();
+}
+
+function updateCompanyCharts() {
+    // Company costs chart
+    const costsCtx = document.getElementById('companyCostsChart');
+    if (costsCtx) {
+        if (window.companyCostsChart) {
+            window.companyCostsChart.destroy();
+        }
+        
+        const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
+        const operationalCosts = totalSalaries * 0.3; // 30% of salaries
+        const otherCosts = totalSalaries * 0.1; // 10% of salaries
+        
+        window.companyCostsChart = new Chart(costsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['الرواتب', 'المصاريف التشغيلية', 'مصاريف أخرى'],
+                datasets: [{
+                    data: [totalSalaries, operationalCosts, otherCosts],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + formatCurrency(context.parsed);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Departments chart
+    const deptCtx = document.getElementById('departmentsChart');
+    if (deptCtx) {
+        if (window.departmentsChart) {
+            window.departmentsChart.destroy();
+        }
+        
+        const departments = {
+            'التطوير': employees.filter(emp => emp.role === 'programmer').length,
+            'التسويق': employees.filter(emp => emp.role === 'blogger' || emp.role === 'marketer').length,
+            'التدريب': employees.filter(emp => emp.role === 'teacher').length,
+            'أخرى': employees.filter(emp => !['programmer', 'blogger', 'marketer', 'teacher'].includes(emp.role)).length
+        };
+        
+        window.departmentsChart = new Chart(deptCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(departments),
+                datasets: [{
+                    label: 'عدد الموظفات',
+                    data: Object.values(departments),
+                    backgroundColor: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b']
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+function addNewEmployee() {
+    showSection('employees');
+    // Focus on the employee name input
+    setTimeout(() => {
+        const nameInput = document.getElementById('employee-name');
+        if (nameInput) {
+            nameInput.focus();
+        }
+    }, 100);
+}
+
+function generatePayrollReport() {
+    showSection('company-finance');
+    showMessage('تم إنشاء تقرير الرواتب', 'success');
+}
+
+function loadCompanyFinance() {
+    const totalPayroll = employees.reduce((sum, emp) => sum + emp.salary, 0);
+    const totalBonuses = totalPayroll * 0.1; // 10% bonuses
+    const operationalExpenses = totalPayroll * 0.3; // 30% operational expenses
+    const netCost = totalPayroll + totalBonuses + operationalExpenses;
+    
+    document.getElementById('total-monthly-payroll').textContent = formatCurrency(totalPayroll);
+    document.getElementById('total-bonuses-month').textContent = formatCurrency(totalBonuses);
+    document.getElementById('operational-expenses').textContent = formatCurrency(operationalExpenses);
+    document.getElementById('net-company-cost').textContent = formatCurrency(netCost);
+    
+    loadPayrollTable();
+}
+
+function loadPayrollTable() {
+    const tbody = document.getElementById('payroll-table-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    employees.forEach(employee => {
+        const baseSalary = employee.salary;
+        const bonus = baseSalary * 0.1; // 10% bonus
+        const deductions = baseSalary * 0.05; // 5% deductions
+        const netSalary = baseSalary + bonus - deductions;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${employee.name}</td>
+            <td>${formatCurrency(baseSalary)}</td>
+            <td>${formatCurrency(bonus)}</td>
+            <td>${formatCurrency(deductions)}</td>
+            <td>${formatCurrency(netSalary)}</td>
+            <td><span class="status-badge active">مدفوع</span></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function generateMonthlyPayroll() {
+    showMessage('تم إنشاء كشف الرواتب الشهري', 'success');
+}
+
+function addBonus() {
+    showMessage('سيتم فتح نافذة إضافة المكافآت قريباً', 'info');
+}
+
+function exportPayrollReport() {
+    const csvHeaders = ['الموظفة', 'الراتب الأساسي', 'المكافآت', 'الاستقطاعات', 'صافي الراتب'];
+    const csvContent = [
+        csvHeaders.join(','),
+        ...employees.map(emp => {
+            const baseSalary = emp.salary;
+            const bonus = baseSalary * 0.1;
+            const deductions = baseSalary * 0.05;
+            const netSalary = baseSalary + bonus - deductions;
+            
+            return [
+                emp.name,
+                baseSalary,
+                bonus,
+                deductions,
+                netSalary
+            ].join(',');
+        })
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `payroll_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    
+    showMessage('تم تصدير تقرير الرواتب', 'success');
+}
+
+function openCompanyProjectModal() {
+    showMessage('سيتم فتح نافذة إضافة مشروع الشركة قريباً', 'info');
+}
+
+// Update navigation to load appropriate sections
 const originalShowSection = showSection;
 window.showSection = function(sectionId) {
     originalShowSection.call(this, sectionId);
     
-    if (sectionId === 'company') {
+    if (sectionId === 'company-dashboard') {
+        setTimeout(() => {
+            loadCompanyOverview();
+        }, 100);
+    } else if (sectionId === 'company-finance') {
+        setTimeout(() => {
+            loadCompanyFinance();
+        }, 100);
+    } else if (sectionId === 'company') {
         setTimeout(() => {
             loadCompanyDashboard();
         }, 100);

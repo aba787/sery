@@ -8,6 +8,9 @@ let selectedProject = null;
 let isShowingAllProjects = true;
 let yearlyIncomes = {}; // Track yearly income for each project
 
+// Firebase integration status
+let firebaseConnected = false;
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     // Set default date to now
@@ -83,16 +86,22 @@ async function handleTransactionSubmit(event) {
         });
         
         if (response.ok) {
-            showMessage('تم حفظ المعاملة بنجاح!', 'success');
+            const result = await response.json();
+            showMessage('تم حفظ المعاملة بنجاح في قاعدة البيانات!', 'success');
             event.target.reset();
             document.getElementById('date').value = new Date().toISOString().slice(0, 16);
-            loadDashboard();
-            loadTransactions();
+            
+            // Reload data with a slight delay to allow Firebase to process
+            setTimeout(() => {
+                loadDashboard();
+                loadTransactions();
+            }, 1000);
         } else {
-            throw new Error('فشل في حفظ المعاملة');
+            throw new Error('فشل في حفظ المعاملة في قاعدة البيانات');
         }
     } catch (error) {
         showMessage('حدث خطأ في حفظ المعاملة: ' + error.message, 'error');
+        console.error('Transaction save error:', error);
     }
 }
 
@@ -120,18 +129,24 @@ function toggleFields() {
 // Load dashboard data
 async function loadDashboard() {
     try {
+        console.log('Loading dashboard data from Firebase...');
+        
         // Load monthly aggregates
         const aggregatesResponse = await fetch('/api/monthly-aggregates');
         if (aggregatesResponse.ok) {
             monthlyAggregates = await aggregatesResponse.json();
+            firebaseConnected = true;
+            console.log('Monthly aggregates loaded from Firebase:', monthlyAggregates.length, 'records');
         } else {
             monthlyAggregates = [];
+            firebaseConnected = false;
         }
         
         // Load forecast
         const forecastResponse = await fetch('/api/forecast');
         if (forecastResponse.ok) {
             forecastData = await forecastResponse.json();
+            console.log('Forecast data loaded from Firebase');
         } else {
             forecastData = { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' };
         }
@@ -142,13 +157,20 @@ async function loadDashboard() {
         // Update charts
         updateCharts();
         
+        // Show connection status
+        if (firebaseConnected) {
+            showMessage('تم الاتصال بقاعدة البيانات بنجاح', 'success');
+        }
+        
     } catch (error) {
         console.error('Error loading dashboard:', error);
+        firebaseConnected = false;
         // Initialize with empty data instead of showing error
         monthlyAggregates = [];
         forecastData = { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' };
         updateKPICards();
         updateCharts();
+        showMessage('خطأ في الاتصال بقاعدة البيانات', 'error');
     }
 }
 
@@ -861,12 +883,20 @@ function updateExpensesChart() {
 // Load transactions
 async function loadTransactions() {
     try {
+        console.log('Loading transactions from Firebase...');
         const response = await fetch('/api/transactions');
-        currentTransactions = await response.json();
-        displayTransactions(currentTransactions);
+        if (response.ok) {
+            currentTransactions = await response.json();
+            displayTransactions(currentTransactions);
+            console.log('Transactions loaded from Firebase:', currentTransactions.length, 'records');
+        } else {
+            throw new Error('Failed to fetch transactions');
+        }
     } catch (error) {
         console.error('Error loading transactions:', error);
-        showMessage('خطأ في تحميل المعاملات', 'error');
+        showMessage('خطأ في تحميل المعاملات من قاعدة البيانات', 'error');
+        currentTransactions = [];
+        displayTransactions(currentTransactions);
     }
 }
 

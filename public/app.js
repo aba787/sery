@@ -1260,6 +1260,280 @@ async function deleteEmployee(id) {
     }
 }
 
+// Company Management Functions
+function loadCompanyDashboard() {
+    updateCompanyStats();
+    displayAdvancedEmployees();
+    updateDepartmentStats();
+    updatePayrollSummary();
+    updatePerformanceChart();
+}
+
+function updateCompanyStats() {
+    const totalEmployees = employees.length;
+    const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
+    const productivity = calculateTeamProductivity();
+    const growth = calculateTeamGrowth();
+
+    document.getElementById('total-company-employees').textContent = totalEmployees;
+    document.getElementById('total-monthly-salaries').textContent = formatCurrency(totalSalaries);
+    document.getElementById('company-productivity').textContent = productivity + '%';
+    document.getElementById('team-growth').textContent = growth >= 0 ? '+' + growth : growth;
+}
+
+function displayAdvancedEmployees() {
+    const tbody = document.getElementById('advanced-employees-body');
+    tbody.innerHTML = '';
+    
+    employees.forEach(employee => {
+        const performance = getEmployeePerformance(employee);
+        const status = getEmployeeStatus(employee);
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <div class="employee-info">
+                    <strong>${employee.name}</strong>
+                    <small>${employee.email || ''}</small>
+                </div>
+            </td>
+            <td>${getRoleName(employee.role)}</td>
+            <td>${formatCurrency(employee.salary)}</td>
+            <td>${formatDate(employee.startDate)}</td>
+            <td><span class="status-badge ${status.class}">${status.text}</span></td>
+            <td>
+                <div class="performance-indicator">
+                    <div class="performance-bar" style="width: ${performance}%"></div>
+                    <span>${performance}%</span>
+                </div>
+            </td>
+            <td>
+                <div class="employee-actions">
+                    <button onclick="viewEmployeeProfile('${employee.id}')" class="view-btn">عرض</button>
+                    <button onclick="editEmployeeAdvanced('${employee.id}')" class="edit-employee-btn">تعديل</button>
+                    <button onclick="manageEmployeeLeave('${employee.id}')" class="leave-btn">إجازة</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function updateDepartmentStats() {
+    const departments = {
+        dev: employees.filter(emp => emp.role === 'programmer'),
+        marketing: employees.filter(emp => emp.role === 'blogger' || emp.role === 'marketer'),
+        training: employees.filter(emp => emp.role === 'teacher')
+    };
+
+    document.getElementById('dev-team-count').textContent = departments.dev.length;
+    document.getElementById('marketing-team-count').textContent = departments.marketing.length;
+    document.getElementById('training-team-count').textContent = departments.training.length;
+
+    document.getElementById('dev-budget').textContent = formatCurrency(
+        departments.dev.reduce((sum, emp) => sum + emp.salary, 0)
+    );
+    document.getElementById('marketing-budget').textContent = formatCurrency(
+        departments.marketing.reduce((sum, emp) => sum + emp.salary, 0)
+    );
+    document.getElementById('training-budget').textContent = formatCurrency(
+        departments.training.reduce((sum, emp) => sum + emp.salary, 0)
+    );
+}
+
+function updatePayrollSummary() {
+    const totalSalaries = employees.reduce((sum, emp) => sum + emp.salary, 0);
+    const bonuses = totalSalaries * 0.1; // 10% average bonus
+    const deductions = totalSalaries * 0.05; // 5% average deductions
+    const netPayroll = totalSalaries + bonuses - deductions;
+
+    document.getElementById('total-payroll').textContent = formatCurrency(totalSalaries);
+    document.getElementById('total-bonuses').textContent = formatCurrency(bonuses);
+    document.getElementById('total-deductions').textContent = formatCurrency(deductions);
+    document.getElementById('net-payroll').textContent = formatCurrency(netPayroll);
+}
+
+function updatePerformanceChart() {
+    const ctx = document.getElementById('performanceChart');
+    if (!ctx) return;
+    
+    if (window.performanceChart && typeof window.performanceChart.destroy === 'function') {
+        window.performanceChart.destroy();
+    }
+
+    const performanceData = employees.map(emp => getEmployeePerformance(emp));
+    const employeeNames = employees.map(emp => emp.name);
+
+    window.performanceChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: employeeNames,
+            datasets: [{
+                label: 'الأداء الشهري',
+                data: performanceData,
+                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                borderColor: '#10b981',
+                borderWidth: 2,
+                pointBackgroundColor: '#10b981'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Utility functions for company management
+function calculateTeamProductivity() {
+    if (employees.length === 0) return 0;
+    const averagePerformance = employees.reduce((sum, emp) => sum + getEmployeePerformance(emp), 0) / employees.length;
+    return Math.round(averagePerformance);
+}
+
+function calculateTeamGrowth() {
+    // Calculate growth based on new hires this month
+    const thisMonth = new Date().getMonth();
+    const thisYear = new Date().getFullYear();
+    
+    const newHires = employees.filter(emp => {
+        const startDate = new Date(emp.startDate);
+        return startDate.getMonth() === thisMonth && startDate.getFullYear() === thisYear;
+    }).length;
+    
+    return newHires;
+}
+
+function getEmployeePerformance(employee) {
+    // Mock performance calculation - in real app this would come from actual performance data
+    const basePerformance = 70;
+    const roleBonus = {
+        'programmer': 15,
+        'blogger': 10,
+        'teacher': 12,
+        'designer': 8,
+        'marketer': 10,
+        'manager': 20
+    };
+    
+    const experience = Math.floor((new Date() - new Date(employee.startDate)) / (1000 * 60 * 60 * 24 * 30));
+    const experienceBonus = Math.min(experience * 2, 20);
+    
+    return Math.min(basePerformance + (roleBonus[employee.role] || 5) + experienceBonus, 100);
+}
+
+function getEmployeeStatus(employee) {
+    // Mock status - in real app this would be stored in database
+    const statuses = [
+        { class: 'active', text: 'نشطة' },
+        { class: 'vacation', text: 'في إجازة' },
+        { class: 'inactive', text: 'غير نشطة' }
+    ];
+    
+    return statuses[0]; // Default to active
+}
+
+// Company management action functions
+function applyEmployeeFilters() {
+    const roleFilter = document.getElementById('role-filter').value;
+    const statusFilter = document.getElementById('status-filter').value;
+    
+    // Apply filters and refresh display
+    let filteredEmployees = [...employees];
+    
+    if (roleFilter) {
+        filteredEmployees = filteredEmployees.filter(emp => emp.role === roleFilter);
+    }
+    
+    if (statusFilter) {
+        // Filter by status when implemented
+    }
+    
+    showMessage(`تم تطبيق الفلاتر - ${filteredEmployees.length} موظفة`, 'success');
+}
+
+function exportEmployeeData() {
+    const csvHeaders = ['الاسم', 'المنصب', 'الراتب', 'تاريخ البداية', 'الهاتف', 'البريد الإلكتروني'];
+    const csvContent = [
+        csvHeaders.join(','),
+        ...employees.map(emp => [
+            emp.name,
+            getRoleName(emp.role),
+            emp.salary,
+            emp.startDate,
+            emp.phone || '',
+            emp.email || ''
+        ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `employees_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    
+    showMessage('تم تصدير بيانات الموظفات بنجاح', 'success');
+}
+
+function generatePayroll() {
+    showMessage('تم إنشاء كشف الراتب للشهر الحالي', 'success');
+}
+
+function exportPayroll() {
+    showMessage('تم تصدير كشف الراتب', 'success');
+}
+
+function scheduleTeamMeeting() {
+    showMessage('تم جدولة اجتماع الفريق لنهاية الأسبوع', 'success');
+}
+
+function sendTeamAnnouncement() {
+    showMessage('تم إرسال الإعلان لجميع أعضاء الفريق', 'success');
+}
+
+function reviewPerformance() {
+    showMessage('سيتم فتح نظام تقييم الأداء قريباً', 'info');
+}
+
+function manageLeave() {
+    showMessage('سيتم فتح نظام إدارة الإجازات قريباً', 'info');
+}
+
+function viewEmployeeProfile(id) {
+    showMessage('سيتم فتح الملف الشخصي للموظفة', 'info');
+}
+
+function editEmployeeAdvanced(id) {
+    showMessage('سيتم فتح نافذة التعديل المتقدم', 'info');
+}
+
+function manageEmployeeLeave(id) {
+    showMessage('سيتم فتح نظام إدارة إجازات الموظفة', 'info');
+}
+
+// Update navigation to load company dashboard
+const originalShowSection = showSection;
+window.showSection = function(sectionId) {
+    originalShowSection.call(this, sectionId);
+    
+    if (sectionId === 'company') {
+        setTimeout(() => {
+            loadCompanyDashboard();
+        }, 100);
+    }
+};
+
 // Placeholder functions for edit/delete transactions (can be implemented later)
 function editTransaction(id) {
     showMessage('ميزة التعديل ستكون متاحة قريباً', 'info');

@@ -20,6 +20,7 @@
                     <button onclick="showSection('add-transaction')" class="nav-btn">إضافة معاملة</button>
                     <button onclick="showSection('transactions')" class="nav-btn">المعاملات</button>
                     <button onclick="showSection('employees')" class="nav-btn">الموظفات</button>
+                    <button onclick="showSection('company')" class="nav-btn">إدارة الشركة</button>
                     <button onclick="showSection('reports')" class="nav-btn">التقارير</button>
                 </nav>
             </header>
@@ -332,8 +333,214 @@
         </section>
 
 
+        <!-- Company Management Section -->
+        <section id="company" class="section">
+            <h2>إدارة الشركة</h2>
+
+            <!-- Company Stats Dashboard -->
+            <div class="company-stats-grid">
+                <div class="company-stat-card">
+                    <div class="achievement-badge">🏢</div>
+                    <h3>إجمالي الموظفات</h3>
+                    <div class="stat-value" id="total-company-employees">0</div>
+                    <div class="stat-details">موظفة نشطة</div>
+                </div>
+
+                <div class="company-stat-card">
+                    <div class="achievement-badge">💰</div>
+                    <h3>إجمالي الرواتب الشهرية</h3>
+                    <div class="stat-value" id="total-monthly-salaries">0 ريال</div>
+                    <div class="stat-details">تكلفة شهرية</div>
+                </div>
+
+                <div class="company-stat-card">
+                    <div class="achievement-badge">📊</div>
+                    <h3>الإنتاجية العامة</h3>
+                    <div class="stat-value" id="company-productivity">95%</div>
+                    <div class="stat-details">معدل الأداء</div>
+                </div>
+
+                <div class="company-stat-card">
+                    <div class="achievement-badge">📈</div>
+                    <h3>نمو الفريق</h3>
+                    <div class="stat-value" id="team-growth">+2</div>
+                    <div class="stat-details">هذا الشهر</div>
+                </div>
+            </div>
+
+            <!-- Advanced Employee Management -->
+            <div class="company-sections">
+                <!-- Employee Management Panel -->
+                <div class="company-panel">
+                    <h3>إدارة متقدمة للموظفات</h3>
+                    
+                    <div class="employee-filters">
+                        <select id="role-filter">
+                            <option value="">جميع المناصب</option>
+                            <option value="programmer">مبرمجة</option>
+                            <option value="blogger">مدونة</option>
+                            <option value="teacher">معلمة لغة</option>
+                            <option value="designer">مصممة</option>
+                            <option value="marketer">مسوقة</option>
+                            <option value="manager">مديرة</option>
+                        </select>
+                        
+                        <select id="status-filter">
+                            <option value="">جميع الحالات</option>
+                            <option value="active">نشطة</option>
+                            <option value="vacation">في إجازة</option>
+                            <option value="inactive">غير نشطة</option>
+                        </select>
+                        
+                        <button onclick="applyEmployeeFilters()" class="filter-btn">تطبيق الفلاتر</button>
+                        <button onclick="exportEmployeeData()" class="export-btn">تصدير البيانات</button>
+                    </div>
+
+                    <div class="employee-advanced-table">
+                        <table class="company-table">
+                            <thead>
+                                <tr>
+                                    <th>الموظفة</th>
+                                    <th>المنصب</th>
+                                    <th>الراتب</th>
+                                    <th>تاريخ البداية</th>
+                                    <th>الحالة</th>
+                                    <th>الأداء</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="advanced-employees-body">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Department Management -->
+                <div class="company-panel">
+                    <h3>إدارة الأقسام</h3>
+                    
+                    <div class="departments-grid">
+                        <div class="department-card">
+                            <h4>قسم التطوير</h4>
+                            <div class="department-stats">
+                                <span id="dev-team-count">1</span> موظفة
+                                <span class="department-budget" id="dev-budget">0 ريال</span>
+                            </div>
+                        </div>
+                        
+                        <div class="department-card">
+                            <h4>قسم التسويق</h4>
+                            <div class="department-stats">
+                                <span id="marketing-team-count">1</span> موظفة
+                                <span class="department-budget" id="marketing-budget">0 ريال</span>
+                            </div>
+                        </div>
+                        
+                        <div class="department-card">
+                            <h4>قسم التدريب</h4>
+                            <div class="department-stats">
+                                <span id="training-team-count">1</span> موظفة
+                                <span class="department-budget" id="training-budget">0 ريال</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payroll Management -->
+                <div class="company-panel">
+                    <h3>إدارة الرواتب</h3>
+                    
+                    <div class="payroll-controls">
+                        <select id="payroll-month">
+                            <option value="current">الشهر الحالي</option>
+                            <option value="previous">الشهر الماضي</option>
+                        </select>
+                        
+                        <button onclick="generatePayroll()" class="generate-btn">إنشاء كشف راتب</button>
+                        <button onclick="exportPayroll()" class="export-btn">تصدير كشف الراتب</button>
+                    </div>
+
+                    <div class="payroll-summary">
+                        <div class="payroll-item">
+                            <span>إجمالي الرواتب:</span>
+                            <span id="total-payroll">0 ريال</span>
+                        </div>
+                        <div class="payroll-item">
+                            <span>المكافآت:</span>
+                            <span id="total-bonuses">0 ريال</span>
+                        </div>
+                        <div class="payroll-item">
+                            <span>الاستقطاعات:</span>
+                            <span id="total-deductions">0 ريال</span>
+                        </div>
+                        <div class="payroll-item total">
+                            <span>الصافي:</span>
+                            <span id="net-payroll">0 ريال</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Tracking -->
+                <div class="company-panel">
+                    <h3>تتبع الأداء</h3>
+                    
+                    <div class="performance-chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                    
+                    <div class="performance-goals">
+                        <h4>أهداف الفريق</h4>
+                        <div class="goal-item">
+                            <span>زيادة الإنتاجية</span>
+                            <div class="goal-progress">
+                                <div class="goal-bar" style="width: 75%"></div>
+                                <span>75%</span>
+                            </div>
+                        </div>
+                        <div class="goal-item">
+                            <span>تطوير المهارات</span>
+                            <div class="goal-progress">
+                                <div class="goal-bar" style="width: 60%"></div>
+                                <span>60%</span>
+                            </div>
+                        </div>
+                        <div class="goal-item">
+                            <span>رضا العملاء</span>
+                            <div class="goal-progress">
+                                <div class="goal-bar" style="width: 90%"></div>
+                                <span>90%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="company-quick-actions">
+                <h3>إجراءات سريعة</h3>
+                <div class="quick-actions-grid">
+                    <button onclick="scheduleTeamMeeting()" class="quick-action-btn">
+                        <span class="action-icon">📅</span>
+                        جدولة اجتماع
+                    </button>
+                    <button onclick="sendTeamAnnouncement()" class="quick-action-btn">
+                        <span class="action-icon">📢</span>
+                        إعلان للفريق
+                    </button>
+                    <button onclick="reviewPerformance()" class="quick-action-btn">
+                        <span class="action-icon">⭐</span>
+                        تقييم الأداء
+                    </button>
+                    <button onclick="manageLeave()" class="quick-action-btn">
+                        <span class="action-icon">🏖️</span>
+                        إدارة الإجازات
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- Reports Section -->
-        <section id="reports" class="section">
             <h2>التقارير والتصدير</h2>
 
             <div class="report-controls">

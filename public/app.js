@@ -32,6 +32,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Toggle fields based on transaction type
     toggleFields();
+
+    // Add resize handler for responsive updates
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            // Update charts on resize
+            if (document.querySelector('.section.active')) {
+                updateCharts();
+                if (document.getElementById('company-dashboard').classList.contains('active')) {
+                    updateCompanyCharts();
+                }
+            }
+        }, 250);
+    });
+
+    // Add touch event handlers for better mobile interaction
+    document.addEventListener('touchstart', function() {}, {passive: true});
 });
 
 // Navigation
@@ -597,12 +615,74 @@ function deleteProject(projectId) {
     }
 }
 
-// Update charts
+// Update charts with responsive options
 function updateCharts() {
     updateRevenueChart();
     updateBusinessChart();
     updateClientsChart();
     updateExpensesChart();
+}
+
+// Mobile detection utility
+function isMobile() {
+    return window.innerWidth <= 768;
+}
+
+// Get responsive chart options
+function getResponsiveChartOptions(baseOptions = {}) {
+    const isMobileDevice = isMobile();
+    
+    return {
+        ...baseOptions,
+        responsive: true,
+        maintainAspectRatio: !isMobileDevice,
+        aspectRatio: isMobileDevice ? 1 : 2,
+        plugins: {
+            ...baseOptions.plugins,
+            legend: {
+                ...baseOptions.plugins?.legend,
+                position: isMobileDevice ? 'bottom' : 'top',
+                labels: {
+                    ...baseOptions.plugins?.legend?.labels,
+                    boxWidth: isMobileDevice ? 12 : 20,
+                    font: {
+                        size: isMobileDevice ? 10 : 12
+                    }
+                }
+            },
+            tooltip: {
+                ...baseOptions.plugins?.tooltip,
+                titleFont: {
+                    size: isMobileDevice ? 12 : 14
+                },
+                bodyFont: {
+                    size: isMobileDevice ? 10 : 12
+                }
+            }
+        },
+        scales: baseOptions.scales ? {
+            ...baseOptions.scales,
+            x: {
+                ...baseOptions.scales.x,
+                ticks: {
+                    ...baseOptions.scales.x?.ticks,
+                    font: {
+                        size: isMobileDevice ? 10 : 12
+                    },
+                    maxRotation: isMobileDevice ? 45 : 0
+                }
+            },
+            y: {
+                ...baseOptions.scales.y,
+                ticks: {
+                    ...baseOptions.scales.y?.ticks,
+                    font: {
+                        size: isMobileDevice ? 10 : 12
+                    }
+                }
+            }
+        } : undefined
+    };
 }
 
 // Revenue and profit chart
@@ -651,18 +731,19 @@ function updateRevenueChart() {
                 borderColor: '#4CAF50',
                 backgroundColor: 'rgba(76, 175, 80, 0.1)',
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                borderWidth: isMobile() ? 2 : 3
             }, {
                 label: 'صافي الربح',
                 data: profitData,
                 borderColor: '#2196F3',
                 backgroundColor: 'rgba(33, 150, 243, 0.1)',
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                borderWidth: isMobile() ? 2 : 3
             }]
         },
-        options: {
-            responsive: true,
+        options: getResponsiveChartOptions({
             scales: {
                 y: {
                     beginAtZero: true,
@@ -682,7 +763,7 @@ function updateRevenueChart() {
                     }
                 }
             }
-        }
+        })
     });
 }
 

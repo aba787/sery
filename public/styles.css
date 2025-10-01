@@ -618,14 +618,48 @@ table tr:hover {
     100% { transform: rotate(360deg); }
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
+/* Enhanced Responsive Design */
+@media (max-width: 1400px) {
     .main-content {
-        padding-right: 280px;
+        padding-right: 300px;
     }
 
     .projects-sidebar {
-        width: 260px;
+        width: 280px;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .charts-grid {
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    }
+}
+
+@media (max-width: 1024px) {
+    .main-content {
+        padding-right: 260px;
+    }
+
+    .projects-sidebar {
+        width: 240px;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .charts-grid {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    }
+
+    .company-overview-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
 }
 
@@ -644,37 +678,418 @@ table tr:hover {
         width: 100%;
         height: auto;
         order: -1;
+        padding: 15px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    header {
         padding: 20px 15px;
+        margin-bottom: 20px;
     }
 
     header h1 {
-        font-size: 2em;
+        font-size: 1.8em;
+        margin-bottom: 15px;
+    }
+
+    nav {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nav-section {
+        margin-bottom: 15px;
+    }
+
+    .nav-btn {
+        padding: 10px 15px;
+        font-size: 14px;
+        width: 100%;
+        text-align: center;
     }
 
     .kpi-grid {
         grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .kpi-card {
+        padding: 20px 15px;
+    }
+
+    .kpi-value {
+        font-size: 2.2em;
     }
 
     .charts-grid {
         grid-template-columns: 1fr;
+        gap: 20px;
     }
 
     .form-grid {
         grid-template-columns: 1fr;
+        gap: 15px;
     }
 
     .filters {
         flex-direction: column;
         align-items: stretch;
+        gap: 10px;
+    }
+
+    .filters input,
+    .filters select,
+    .filters button {
+        width: 100%;
+        margin-bottom: 5px;
     }
 
     .report-controls {
         flex-direction: column;
+        gap: 10px;
+    }
+
+    .report-controls select,
+    .report-controls button {
+        width: 100%;
+    }
+
+    /* Company specific mobile styles */
+    .company-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .company-quick-btn {
+        padding: 15px 10px;
+        font-size: 12px;
+    }
+
+    .performance-charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .finance-overview {
+        grid-template-columns: 1fr;
+    }
+
+    .company-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .departments-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payroll-actions {
+        flex-direction: column;
+    }
+
+    .payroll-actions button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .employee-filters {
+        flex-direction: column;
+    }
+
+    .employee-filters select,
+    .employee-filters button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 14px;
+    }
+
+    .main-content {
+        padding: 10px;
+    }
+
+    .projects-sidebar {
+        padding: 10px;
+        max-height: 250px;
+    }
+
+    header {
+        padding: 15px 10px;
+        margin-bottom: 15px;
+    }
+
+    header h1 {
+        font-size: 1.5em;
+        margin-bottom: 10px;
+    }
+
+    .section h2 {
+        font-size: 1.5em;
+        margin-bottom: 20px;
     }
 
     .nav-btn {
-        padding: 12px 20px;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .kpi-card {
+        padding: 15px 10px;
+    }
+
+    .kpi-value {
+        font-size: 1.8em;
+    }
+
+    .achievement-badge {
+        width: 30px;
+        height: 30px;
         font-size: 14px;
+        top: 10px;
+        right: 10px;
+    }
+
+    .chart-container {
+        padding: 15px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 12px;
+        font-size: 14px;
+    }
+
+    .submit-btn {
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+
+    /* Table responsiveness */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        min-width: 600px;
+    }
+
+    table th,
+    table td {
+        padding: 12px 8px;
+        font-size: 12px;
+    }
+
+    /* Modal responsiveness */
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 20px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .modal h2 {
+        font-size: 1.3em;
+        margin-bottom: 20px;
+    }
+
+    /* Sidebar project cards */
+    .sidebar-project {
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+
+    .sidebar-project-name {
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+
+    .sidebar-project-stats {
+        font-size: 12px;
+    }
+
+    /* Company overview adjustments */
+    .company-overview-card {
+        padding: 15px;
+    }
+
+    .overview-value {
+        font-size: 1.8em;
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .company-quick-btn {
+        padding: 20px 15px;
+    }
+
+    /* Finance cards */
+    .finance-card {
+        padding: 15px;
+    }
+
+    .finance-amount {
+        font-size: 1.5em;
+    }
+
+    /* Employee management */
+    .form-row {
+        flex-direction: column;
+    }
+
+    .form-group {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .company-projects-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .projects-filters {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .company-projects-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .project-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .project-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .project-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}
+
+/* Landscape phone orientation */
+@media (max-width: 768px) and (orientation: landscape) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .nav-btn {
+        padding: 8px 15px;
+        font-size: 13px;
+    }
+}
+
+/* Tablet specific styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .company-overview-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .finance-overview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Touch device optimizations */
+@media (pointer: coarse) {
+    .nav-btn,
+    .submit-btn,
+    .company-quick-btn,
+    .add-project-btn-small,
+    .show-all-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        min-height: 44px;
+    }
+
+    table th,
+    table td {
+        padding: 15px 12px;
+    }
+
+    .sidebar-project {
+        padding: 20px 15px;
+    }
+}
+
+/* High resolution displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .achievement-badge {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .kpi-card,
+    .chart-container,
+    .project-card {
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+}
+
+/* Print styles */
+@media print {
+    .projects-sidebar,
+    .nav-btn,
+    .achievement-badge,
+    .add-project-btn-small,
+    .show-all-btn {
+        display: none !important;
+    }
+
+    .main-content {
+        padding-right: 0 !important;
+        padding: 20px !important;
+    }
+
+    .section {
+        break-inside: avoid;
+    }
+
+    .kpi-grid,
+    .charts-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
     }
 }
 
@@ -977,6 +1392,98 @@ table tr:hover {
     justify-content: center;
     font-size: 18px;
     box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+    z-index: 1;
+}
+
+/* Flexible layout utilities */
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.flex-column {
+    flex-direction: column;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Touch optimizations */
+.touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px;
+}
+
+/* Scrollable containers */
+.scrollable {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Improved button spacing for mobile */
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.button-group.vertical {
+    flex-direction: column;
+}
+
+.button-group.vertical > * {
+    width: 100%;
+}
+
+/* Enhanced table responsiveness */
+.responsive-table {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table table {
+    min-width: 100%;
+    width: max-content;
+}
+
+/* Mobile-first form styling */
+.mobile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.mobile-form .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+@media (min-width: 768px) {
+    .mobile-form .form-row {
+        flex-direction: row;
+    }
+    
+    .mobile-form .form-row .form-group {
+        flex: 1;
+    }
 }
 
 .progress-indicator {

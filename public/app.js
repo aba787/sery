@@ -2129,7 +2129,81 @@ function closeAddProjectModal() {
 }
 
 function openCompanyProjectModal() {
-    document.getElementById('companyProjectModal').style.display = 'block';
+    const modalHTML = `
+        <div id="companyProjectModal" class="modal" style="display: block;">
+            <div class="modal-content">
+                <span class="close" onclick="closeCompanyProjectModal()">&times;</span>
+                <h2>إضافة مشروع شركة جديد</h2>
+                <form id="company-project-form">
+                    <div class="form-group">
+                        <label for="company-project-name">اسم المشروع:</label>
+                        <input type="text" id="company-project-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-description">وصف المشروع:</label>
+                        <textarea id="company-project-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-budget">الميزانية (ريال):</label>
+                        <input type="number" id="company-project-budget" min="0" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-deadline">الموعد النهائي:</label>
+                        <input type="date" id="company-project-deadline" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-employees">الموظفات المخصصات:</label>
+                        <select id="company-project-employees" multiple style="height: 100px;">
+                            ${employees.map(emp => `<option value="${emp.id}">${emp.name} - ${getRoleName(emp.role)}</option>`).join('')}
+                        </select>
+                        <small style="color: rgba(255,255,255,0.7);">اضغط Ctrl للاختيار المتعدد</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-project-color">لون المشروع:</label>
+                        <select id="company-project-color">
+                            <option value="#10b981">أخضر</option>
+                            <option value="#3b82f6">أزرق</option>
+                            <option value="#f59e0b">برتقالي</option>
+                            <option value="#8b5cf6">بنفسجي</option>
+                            <option value="#ef4444">أحمر</option>
+                            <option value="#06b6d4">أزرق فاتح</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn">حفظ المشروع</button>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    document.getElementById('company-project-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const selectedEmployees = Array.from(document.getElementById('company-project-employees').selectedOptions).map(option => option.value);
+
+        const project = {
+            id: Date.now().toString(),
+            name: document.getElementById('company-project-name').value,
+            description: document.getElementById('company-project-description').value,
+            budget: parseFloat(document.getElementById('company-project-budget').value) || 0,
+            deadline: document.getElementById('company-project-deadline').value,
+            assignedEmployees: selectedEmployees,
+            color: document.getElementById('company-project-color').value,
+            progress: 0,
+            status: 'active',
+            createdAt: new Date().toISOString()
+        };
+
+        companyProjects.push(project);
+        localStorage.setItem('companyProjects', JSON.stringify(companyProjects));
+
+        closeCompanyProjectModal();
+        displayCompanyProjects();
+        updateCompanyOverviewData();
+
+        showMessage('تم إضافة مشروع الشركة بنجاح!', 'success');
+    });
 }
 
 function closeCompanyProjectModal() {

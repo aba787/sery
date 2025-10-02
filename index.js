@@ -52,7 +52,9 @@ function requireAuth(req, res, next) {
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
-// Serve login page for unauthenticated users
+// Serve static files (CSS, JS, images) without authentication
+app.use('/styles.css', express.static('public/styles.css'));
+app.use('/app.js', express.static('public/app.js'));
 app.use('/public', express.static('public'));
 
 // Get user's private data storage

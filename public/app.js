@@ -656,7 +656,7 @@ function isMobile() {
 // Get responsive chart options
 function getResponsiveChartOptions(baseOptions = {}) {
     const isMobileDevice = isMobile();
-    
+
     return {
         ...baseOptions,
         responsive: true,
@@ -2097,3 +2097,123 @@ function deleteTransaction(id) {
         showMessage('ميزة الحذف ستكون متاحة قريباً', 'info');
     }
 }
+
+// Define all functions first
+function showSection(sectionName) {
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(section => {
+        section.style.display = 'none';
+    });
+
+    const targetSection = document.getElementById(sectionName);
+    if (targetSection) {
+        targetSection.style.display = 'block';
+    }
+
+    // Update active nav
+    const navButtons = document.querySelectorAll('.nav-button');
+    navButtons.forEach(btn => btn.classList.remove('active'));
+
+    const activeButton = document.querySelector(`[onclick="showSection('${sectionName}')"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+}
+
+function openAddProjectModal() {
+    document.getElementById('addProjectModal').style.display = 'block';
+}
+
+function closeAddProjectModal() {
+    document.getElementById('addProjectModal').style.display = 'none';
+}
+
+function openCompanyProjectModal() {
+    document.getElementById('companyProjectModal').style.display = 'block';
+}
+
+function closeCompanyProjectModal() {
+    document.getElementById('companyProjectModal').style.display = 'none';
+}
+
+function showAllProjects() {
+    showSection('projects');
+}
+
+function addNewEmployee() {
+    console.log('Add new employee');
+}
+
+function generatePayrollReport() {
+    console.log('Generate payroll report');
+}
+
+function generateMonthlyPayroll() {
+    console.log('Generate monthly payroll');
+}
+
+function addBonus() {
+    console.log('Add bonus');
+}
+
+function exportPayrollReport() {
+    console.log('Export payroll report');
+}
+
+function editEmployee(id) {
+    console.log('Edit employee:', id);
+}
+
+function deleteEmployee(id) {
+    console.log('Delete employee:', id);
+}
+
+function editProject(id) {
+    console.log('Edit project:', id);
+}
+
+function deleteProject(id) {
+    console.log('Delete project:', id);
+}
+
+function toggleFields() {
+    console.log('Toggle fields');
+}
+
+function applyFilters() {
+    console.log('Apply filters');
+}
+
+function clearFilters() {
+    console.log('Clear filters');
+}
+
+function generateReport() {
+    console.log('Generate report');
+}
+
+function exportToCSV() {
+    console.log('Export to CSV');
+}
+
+// Make functions globally available immediately
+window.showSection = showSection;
+window.openAddProjectModal = openAddProjectModal;
+window.closeAddProjectModal = closeAddProjectModal;
+window.openCompanyProjectModal = openCompanyProjectModal;
+window.closeCompanyProjectModal = closeCompanyProjectModal;
+window.showAllProjects = showAllProjects;
+window.addNewEmployee = addNewEmployee;
+window.generatePayrollReport = generatePayrollReport;
+window.generateMonthlyPayroll = generateMonthlyPayroll;
+window.addBonus = addBonus;
+window.exportPayrollReport = exportPayrollReport;
+window.editEmployee = editEmployee;
+window.deleteEmployee = deleteEmployee;
+window.editProject = editProject;
+window.deleteProject = deleteProject;
+window.toggleFields = toggleFields;
+window.applyFilters = applyFilters;
+window.clearFilters = clearFilters;
+window.generateReport = generateReport;
+window.exportToCSV = exportToCSV;

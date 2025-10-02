@@ -5,12 +5,60 @@
 }
 
 body {
-    font-family: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
-    color: #333;
     direction: rtl;
-    position: relative;
+    color: #333;
+    overflow-x: hidden;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        margin: 10px !important;
+    }
+
+    .sidebar {
+        width: 100% !important;
+        position: relative !important;
+        height: auto !important;
+    }
+
+    .main-content {
+        margin-right: 0 !important;
+        padding: 20px 10px !important;
+    }
+
+    .nav-button {
+        padding: 10px !important;
+        font-size: 14px !important;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+
+    .project-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .header h1 {
+        font-size: 20px !important;
+    }
+
+    .btn {
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+    }
+
+    .modal-content {
+        width: 95% !important;
+        margin: 5% auto !important;
+    }
 }
 
 body::before {

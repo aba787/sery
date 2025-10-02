@@ -1,4 +1,3 @@
-
 const express = require('express');
 const path = require('path');
 const app = express();
@@ -50,7 +49,7 @@ app.post('/api/employees', async (req, res) => {
     const employee = req.body;
     employee.createdAt = new Date();
     employee.id = Date.now().toString();
-    
+
     if (isFirebaseReady) {
       try {
         const docRef = await db.collection('employees').add(employee);
@@ -65,7 +64,7 @@ app.post('/api/employees', async (req, res) => {
       memoryStorage.employees = memoryStorage.employees || [];
       memoryStorage.employees.push(employee);
     }
-    
+
     res.json({ success: true, employee });
   } catch (error) {
     console.error('Error adding employee:', error);
@@ -76,7 +75,7 @@ app.post('/api/employees', async (req, res) => {
 app.get('/api/employees', async (req, res) => {
   try {
     let employees = [];
-    
+
     if (isFirebaseReady) {
       try {
         const snapshot = await db.collection('employees').get();
@@ -85,7 +84,7 @@ app.get('/api/employees', async (req, res) => {
           employees.push({
             id: doc.id,
             ...data,
-            createdAt: data.createdAt instanceof admin.firestore.Timestamp ? 
+            createdAt: data.createdAt instanceof admin.firestore.Timestamp ?
               data.createdAt.toDate().toISOString() : data.createdAt
           });
         });
@@ -97,7 +96,7 @@ app.get('/api/employees', async (req, res) => {
     } else {
       employees = memoryStorage.employees || [];
     }
-    
+
     res.json(employees);
   } catch (error) {
     console.error('Error fetching employees:', error);
@@ -109,7 +108,7 @@ app.put('/api/employees/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    
+
     if (isFirebaseReady) {
       try {
         await db.collection('employees').doc(id).update(updates);
@@ -131,7 +130,7 @@ app.put('/api/employees/:id', async (req, res) => {
         }
       }
     }
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating employee:', error);
@@ -142,7 +141,7 @@ app.put('/api/employees/:id', async (req, res) => {
 app.delete('/api/employees/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     if (isFirebaseReady) {
       try {
         await db.collection('employees').doc(id).delete();
@@ -158,7 +157,7 @@ app.delete('/api/employees/:id', async (req, res) => {
         memoryStorage.employees = memoryStorage.employees.filter(emp => emp.id !== id);
       }
     }
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting employee:', error);
@@ -173,7 +172,7 @@ app.post('/api/transactions', async (req, res) => {
     transaction.createdAt = new Date();
     transaction.date = new Date(transaction.date);
     transaction.id = Date.now().toString(); // Simple ID generation
-    
+
     try {
       // Try to store in Firestore
       const docRef = await db.collection('transactions').add(transaction);
@@ -184,10 +183,10 @@ app.post('/api/transactions', async (req, res) => {
       // Fallback to memory storage
       memoryStorage.transactions.push(transaction);
     }
-    
+
     // Recalculate monthly aggregates
     await calculateMonthlyAggregates();
-    
+
     res.json({ success: true, transaction });
   } catch (error) {
     console.error('Error adding transaction:', error);
@@ -199,7 +198,7 @@ app.get('/api/transactions', async (req, res) => {
   try {
     const { businessId, startDate, endDate } = req.query;
     let transactions = [];
-    
+
     try {
       // Try to get from Firebase
       const snapshot = await db.collection('transactions').get();
@@ -222,23 +221,23 @@ app.get('/api/transactions', async (req, res) => {
         createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt
       }));
     }
-    
+
     // Apply filters
     if (businessId) {
       transactions = transactions.filter(t => t.businessId === businessId);
     }
-    
+
     if (startDate) {
       transactions = transactions.filter(t => new Date(t.date) >= new Date(startDate));
     }
-    
+
     if (endDate) {
       transactions = transactions.filter(t => new Date(t.date) <= new Date(endDate));
     }
-    
+
     // Sort by date descending
     transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
+
     res.json(transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);
@@ -249,7 +248,7 @@ app.get('/api/transactions', async (req, res) => {
 app.get('/api/monthly-aggregates', async (req, res) => {
   try {
     let aggregates = [];
-    
+
     try {
       // Try to get from Firebase
       const snapshot = await db.collection('monthlyAggregates').get();
@@ -265,10 +264,10 @@ app.get('/api/monthly-aggregates', async (req, res) => {
       // Fallback to memory storage
       aggregates = memoryStorage.monthlyAggregates;
     }
-    
+
     // Sort by year and month
     aggregates.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
-    
+
     res.json(aggregates);
   } catch (error) {
     console.error('Error fetching aggregates:', error);
@@ -290,7 +289,7 @@ app.get('/api/forecast', async (req, res) => {
 async function calculateMonthlyAggregates() {
   try {
     let transactions = [];
-    
+
     try {
       // Try to get from Firebase
       const snapshot = await db.collection('transactions').get();
@@ -309,13 +308,13 @@ async function calculateMonthlyAggregates() {
         date: t.date instanceof Date ? t.date : new Date(t.date)
       }));
     }
-    
+
     const aggregates = {};
-    
+
     transactions.forEach(transaction => {
       const date = transaction.date;
       const monthKey = `${transaction.businessId}_${date.getFullYear()}_${date.getMonth() + 1}`;
-      
+
       if (!aggregates[monthKey]) {
         aggregates[monthKey] = {
           businessId: transaction.businessId,
@@ -329,10 +328,10 @@ async function calculateMonthlyAggregates() {
           transactions_count: 0
         };
       }
-      
+
       const agg = aggregates[monthKey];
       agg.transactions_count++;
-      
+
       if (transaction.type === 'revenue') {
         agg.total_revenue += parseFloat(transaction.amount || 0);
         agg.students_count += parseInt(transaction.students || 0);
@@ -341,48 +340,48 @@ async function calculateMonthlyAggregates() {
       } else if (transaction.type === 'expense') {
         agg.total_expenses += parseFloat(transaction.amount || 0);
       }
-      
+
       // Add costs to expenses
       if (transaction.cost) {
         agg.total_expenses += parseFloat(transaction.cost);
       }
-      
+
       agg.net_profit = agg.total_revenue - agg.total_expenses;
       agg.avg_ticket = agg.students_count > 0 ? agg.total_revenue / agg.students_count : 0;
     });
-    
+
     // Calculate growth rates
     const aggregatesList = Object.values(aggregates).sort((a, b) => {
       return (a.year * 100 + a.month) - (b.year * 100 + b.month);
     });
-    
+
     for (let i = 1; i < aggregatesList.length; i++) {
       const current = aggregatesList[i];
       const previous = aggregatesList[i - 1];
-      
+
       if (previous.net_profit !== 0) {
         current.growth_vs_prev = (current.net_profit - previous.net_profit) / Math.abs(previous.net_profit);
       } else {
         current.growth_vs_prev = 0;
       }
     }
-    
+
     try {
       // Try to save to Firebase
       const batch = db.batch();
-      
+
       // Clear existing aggregates
       const existingSnapshot = await db.collection('monthlyAggregates').get();
       existingSnapshot.docs.forEach(doc => {
         batch.delete(doc.ref);
       });
-      
+
       // Add new aggregates
       aggregatesList.forEach(agg => {
         const ref = db.collection('monthlyAggregates').doc();
         batch.set(ref, agg);
       });
-      
+
       await batch.commit();
       console.log('Monthly aggregates updated in Firebase');
     } catch (firebaseError) {
@@ -390,7 +389,7 @@ async function calculateMonthlyAggregates() {
       memoryStorage.monthlyAggregates = aggregatesList;
       console.log('Monthly aggregates updated in memory storage');
     }
-    
+
   } catch (error) {
     console.error('Error calculating monthly aggregates:', error);
   }
@@ -400,7 +399,7 @@ async function calculateMonthlyAggregates() {
 async function calculateForecast() {
   try {
     let aggregates = [];
-    
+
     if (isFirebaseReady) {
       try {
         const snapshot = await db.collection('monthlyAggregates').get();
@@ -413,36 +412,36 @@ async function calculateForecast() {
     } else {
       aggregates = memoryStorage.monthlyAggregates || [];
     }
-    
+
     aggregates.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
-    
+
     if (aggregates.length < 2) {
       return { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' };
     }
-    
+
     // Get last 6 months for forecast
     const recentMonths = aggregates.slice(-6);
     const growthRates = [];
-    
+
     for (let i = 1; i < recentMonths.length; i++) {
       const prev = recentMonths[i - 1];
       const curr = recentMonths[i];
-      
+
       if (prev.net_profit !== 0) {
         growthRates.push((curr.net_profit - prev.net_profit) / Math.abs(prev.net_profit));
       }
     }
-    
+
     if (growthRates.length === 0) {
       return { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' };
     }
-    
+
     const avgGrowth = growthRates.reduce((a, b) => a + b, 0) / growthRates.length;
     const lastMonth = recentMonths[recentMonths.length - 1];
-    
+
     const forecastProfit = lastMonth.net_profit * (1 + avgGrowth);
     const forecastRevenue = lastMonth.total_revenue * (1 + avgGrowth);
-    
+
     return {
       forecast_revenue: Math.max(0, forecastRevenue),
       forecast_profit: Math.max(0, forecastProfit),
@@ -458,6 +457,6 @@ async function calculateForecast() {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Business Analytics Server running on port ${PORT}`);
-  console.log(`Access your dashboard at http://localhost:${PORT}`);
+  console.log(`Access your dashboard at http://0.0.0.0:${PORT}`);
   console.log('Firebase integration active - data will be stored in Firestore');
 });

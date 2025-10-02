@@ -241,54 +241,44 @@
 
             <div class="form-container">
                 <h3>إضافة موظفة جديدة</h3>
-                <form id="employee-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="employee-name">الاسم:</label>
-                            <input type="text" id="employee-name" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="employee-role">المنصب:</label>
-                            <select id="employee-role" name="role" required>
-                                <option value="">اختر المنصب</option>
-                                <option value="programmer">مبرمجة</option>
-                                <option value="blogger">مدونة</option>
-                                <option value="teacher">معلمة لغة</option>
-                                <option value="designer">مصممة</option>
-                                <option value="marketer">مسوقة</option>
-                                <option value="manager">مديرة</option>
-                                <option value="other">أخرى</option>
-                            </select>
-                        </div>
+                <form id="employee-form" class="form-grid">
+                    <div class="form-group">
+                        <label for="employee-name">الاسم:</label>
+                        <input type="text" id="employee-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="employee-role">المنصب:</label>
+                        <select id="employee-role" name="role" required>
+                            <option value="">اختر المنصب</option>
+                            <option value="programmer">مبرمجة</option>
+                            <option value="blogger">مدونة</option>
+                            <option value="teacher">معلمة لغة</option>
+                            <option value="designer">مصممة</option>
+                            <option value="marketer">مسوقة</option>
+                            <option value="manager">مديرة</option>
+                            <option value="other">أخرى</option>
+                        </select>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="employee-salary">الراتب (شهري):</label>
-                            <input type="number" id="employee-salary" name="salary" min="0" step="100" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="employee-phone">رقم الهاتف:</label>
-                            <input type="tel" id="employee-phone" name="phone">
-                        </div>
+                    <div class="form-group">
+                        <label for="employee-salary">الراتب (شهري):</label>
+                        <input type="number" id="employee-salary" name="salary" min="0" step="100" required>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="employee-email">البريد الإلكتروني:</label>
-                            <input type="email" id="employee-email" name="email">
-                        </div>
-                        <div class="form-group">
-                            <label for="employee-start-date">تاريخ البداية:</label>
-                            <input type="date" id="employee-start-date" name="startDate" required>
-                        </div>
+                    <div class="form-group">
+                        <label for="employee-phone">رقم الهاتف:</label>
+                        <input type="tel" id="employee-phone" name="phone">
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group full-width">
-                            <label for="employee-notes">ملاحظات:</label>
-                            <textarea id="employee-notes" name="notes" rows="2"></textarea>
-                        </div>
+                    <div class="form-group">
+                        <label for="employee-email">البريد الإلكتروني:</label>
+                        <input type="email" id="employee-email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="employee-start-date">تاريخ البداية:</label>
+                        <input type="date" id="employee-start-date" name="startDate" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="employee-notes">ملاحظات:</label>
+                        <textarea id="employee-notes" name="notes" rows="2"></textarea>
                     </div>
 
                     <button type="submit" class="submit-btn">إضافة موظفة</button>
@@ -298,7 +288,7 @@
             <div class="employees-list">
                 <h3>قائمة الموظفات</h3>
                 <div class="table-container">
-                    <table class="employees-table">
+                    <table id="employees-table">
                         <thead>
                             <tr>
                                 <th>الاسم</th>

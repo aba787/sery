@@ -1200,8 +1200,42 @@ table tr:hover {
 }
 
 .sidebar-project-count {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.6);
     font-size: 12px;
+}
+
+.sidebar-project-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar-project:hover .sidebar-project-actions {
+    opacity: 1;
+}
+
+.sidebar-edit-btn,
+.sidebar-delete-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: white;
+}
+
+.sidebar-edit-btn:hover {
+    background: rgba(33, 150, 243, 0.3);
+    transform: scale(1.1);
+}
+
+.sidebar-delete-btn:hover {
+    background: rgba(244, 67, 54, 0.3);
+    transform: scale(1.1);
 }
 
 .show-all-btn {
@@ -1480,7 +1514,7 @@ table tr:hover {
     .mobile-form .form-row {
         flex-direction: row;
     }
-    
+
     .mobile-form .form-row .form-group {
         flex: 1;
     }

@@ -468,6 +468,10 @@ function displaySidebarProjects() {
                 </div>
                 <div class="sidebar-project-count">${totalTransactions} معاملة</div>
             </div>
+            <div class="sidebar-project-actions">
+                <button onclick="event.stopPropagation(); editProject('${project.id}')" class="sidebar-edit-btn" title="تعديل المشروع">✏️</button>
+                <button onclick="event.stopPropagation(); deleteProject('${project.id}')" class="sidebar-delete-btn" title="حذف المشروع">🗑️</button>
+            </div>
         `;
 
         projectElement.addEventListener('click', () => {
@@ -598,9 +602,25 @@ function editProject(projectId) {
 
 // Delete project
 function deleteProject(projectId) {
-    if (confirm('هل أنت متأكد من حذف هذا المشروع؟ سيتم حذف جميع البيانات المرتبطة به.')) {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) {
+        showMessage('المشروع غير موجود', 'error');
+        return;
+    }
+
+    if (confirm(`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة به بشكل نهائي.`)) {
+        // Remove project from projects array
         projects = projects.filter(p => p.id !== projectId);
         localStorage.setItem('projects', JSON.stringify(projects));
+
+        // Clean up yearly income data for this project
+        const yearlyIncomes = getYearlyIncomes();
+        const currentYear = new Date().getFullYear();
+        const projectYearlyKey = `${projectId}_${currentYear}`;
+        if (yearlyIncomes[projectYearlyKey]) {
+            delete yearlyIncomes[projectYearlyKey];
+            localStorage.setItem('yearlyIncomes', JSON.stringify(yearlyIncomes));
+        }
 
         // If deleted project was selected, show all projects
         if (selectedProject === projectId) {
@@ -609,9 +629,14 @@ function deleteProject(projectId) {
             displaySidebarProjects();
         }
 
+        // Update business options in all select elements
         updateBusinessOptions();
 
-        showMessage('تم حذف المشروع بنجاح', 'success');
+        // Reload data to reflect changes
+        loadDashboard();
+        loadTransactions();
+
+        showMessage(`تم حذف مشروع "${project.name}" بنجاح`, 'success');
     }
 }
 

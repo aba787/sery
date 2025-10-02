@@ -1676,7 +1676,7 @@ function updateCompanyCharts() {
     // Company costs chart
     const costsCtx = document.getElementById('companyCostsChart');
     if (costsCtx) {
-        if (window.companyCostsChart) {
+        if (window.companyCostsChart && typeof window.companyCostsChart.destroy === 'function') {
             window.companyCostsChart.destroy();
         }
 
@@ -1711,7 +1711,7 @@ function updateCompanyCharts() {
     // Departments chart
     const deptCtx = document.getElementById('departmentsChart');
     if (deptCtx) {
-        if (window.departmentsChart) {
+        if (window.departmentsChart && typeof window.departmentsChart.destroy === 'function') {
             window.departmentsChart.destroy();
         }
 

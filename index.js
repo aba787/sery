@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -27,43 +28,95 @@ try {
   isFirebaseReady = false;
 }
 
-// Fallback to in-memory storage if Firebase fails
-let memoryStorage = {
-  transactions: [],
-  employees: [],
-  monthlyAggregates: []
-};
+// Private data storage - each user gets their own isolated storage
+let privateUserData = {};
+
+// Authentication configuration
+const MASTER_PASSWORD = 'sa'; // Your private password
+const SESSION_SECRET = 'your-secret-key-12345'; // Change this in production
 
 // Middleware
 app.use(express.json());
-app.use(express.static('public'));
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+}));
+
+// Authentication middleware
+function requireAuth(req, res, next) {
+  if (req.session && req.session.authenticated) {
+    return next();
+  }
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
+// Serve login page for unauthenticated users
+app.use('/public', express.static('public'));
+
+// Get user's private data storage
+function getUserData(sessionId) {
+  if (!privateUserData[sessionId]) {
+    privateUserData[sessionId] = {
+      transactions: [],
+      employees: [],
+      monthlyAggregates: [],
+      projects: []
+    };
+  }
+  return privateUserData[sessionId];
+}
+
+// Authentication routes
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  
+  if (password === MASTER_PASSWORD) {
+    req.session.authenticated = true;
+    req.session.userId = 'master_user'; // Single user system
+    res.json({ success: true, message: 'تم تسجيل الدخول بنجاح' });
+  } else {
+    res.status(401).json({ error: 'كلمة المرور غير صحيحة' });
+  }
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'خطأ في تسجيل الخروج' });
+    }
+    res.json({ success: true, message: 'تم تسجيل الخروج بنجاح' });
+  });
+});
+
+app.get('/api/check-auth', (req, res) => {
+  if (req.session && req.session.authenticated) {
+    res.json({ authenticated: true });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
 
 // Routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  // Check if user is authenticated
+  if (req.session && req.session.authenticated) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    res.sendFile(path.join(__dirname, 'Password.html'));
+  }
 });
 
-// API Routes for employees
-app.post('/api/employees', async (req, res) => {
+// API Routes for employees (protected)
+app.post('/api/employees', requireAuth, async (req, res) => {
   try {
     const employee = req.body;
     employee.createdAt = new Date();
     employee.id = Date.now().toString();
 
-    if (isFirebaseReady) {
-      try {
-        const docRef = await db.collection('employees').add(employee);
-        employee.id = docRef.id;
-        console.log('Employee saved to Firebase');
-      } catch (firebaseError) {
-        console.log('Firebase not available, using memory storage');
-        memoryStorage.employees = memoryStorage.employees || [];
-        memoryStorage.employees.push(employee);
-      }
-    } else {
-      memoryStorage.employees = memoryStorage.employees || [];
-      memoryStorage.employees.push(employee);
-    }
+    const userData = getUserData(req.session.id);
+    userData.employees.push(employee);
 
     res.json({ success: true, employee });
   } catch (error) {
@@ -72,63 +125,25 @@ app.post('/api/employees', async (req, res) => {
   }
 });
 
-app.get('/api/employees', async (req, res) => {
+app.get('/api/employees', requireAuth, async (req, res) => {
   try {
-    let employees = [];
-
-    if (isFirebaseReady) {
-      try {
-        const snapshot = await db.collection('employees').get();
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          employees.push({
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt instanceof admin.firestore.Timestamp ?
-              data.createdAt.toDate().toISOString() : data.createdAt
-          });
-        });
-        console.log(`Loaded ${employees.length} employees from Firebase`);
-      } catch (firebaseError) {
-        console.log('Firebase not available, using memory storage');
-        employees = memoryStorage.employees || [];
-      }
-    } else {
-      employees = memoryStorage.employees || [];
-    }
-
-    res.json(employees);
+    const userData = getUserData(req.session.id);
+    res.json(userData.employees);
   } catch (error) {
     console.error('Error fetching employees:', error);
     res.json([]);
   }
 });
 
-app.put('/api/employees/:id', async (req, res) => {
+app.put('/api/employees/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const userData = getUserData(req.session.id);
 
-    if (isFirebaseReady) {
-      try {
-        await db.collection('employees').doc(id).update(updates);
-      } catch (firebaseError) {
-        // Update in memory storage
-        if (memoryStorage.employees) {
-          const index = memoryStorage.employees.findIndex(emp => emp.id === id);
-          if (index !== -1) {
-            memoryStorage.employees[index] = { ...memoryStorage.employees[index], ...updates };
-          }
-        }
-      }
-    } else {
-      // Update in memory storage
-      if (memoryStorage.employees) {
-        const index = memoryStorage.employees.findIndex(emp => emp.id === id);
-        if (index !== -1) {
-          memoryStorage.employees[index] = { ...memoryStorage.employees[index], ...updates };
-        }
-      }
+    const index = userData.employees.findIndex(emp => emp.id === id);
+    if (index !== -1) {
+      userData.employees[index] = { ...userData.employees[index], ...updates };
     }
 
     res.json({ success: true });
@@ -138,25 +153,12 @@ app.put('/api/employees/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/employees/:id', async (req, res) => {
+app.delete('/api/employees/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (isFirebaseReady) {
-      try {
-        await db.collection('employees').doc(id).delete();
-      } catch (firebaseError) {
-        // Delete from memory storage
-        if (memoryStorage.employees) {
-          memoryStorage.employees = memoryStorage.employees.filter(emp => emp.id !== id);
-        }
-      }
-    } else {
-      // Delete from memory storage
-      if (memoryStorage.employees) {
-        memoryStorage.employees = memoryStorage.employees.filter(emp => emp.id !== id);
-      }
-    }
+    const userData = getUserData(req.session.id);
+    
+    userData.employees = userData.employees.filter(emp => emp.id !== id);
 
     res.json({ success: true });
   } catch (error) {
@@ -165,27 +167,19 @@ app.delete('/api/employees/:id', async (req, res) => {
   }
 });
 
-// API Routes for transactions
-app.post('/api/transactions', async (req, res) => {
+// API Routes for transactions (protected)
+app.post('/api/transactions', requireAuth, async (req, res) => {
   try {
     const transaction = req.body;
     transaction.createdAt = new Date();
     transaction.date = new Date(transaction.date);
-    transaction.id = Date.now().toString(); // Simple ID generation
+    transaction.id = Date.now().toString();
 
-    try {
-      // Try to store in Firestore
-      const docRef = await db.collection('transactions').add(transaction);
-      transaction.id = docRef.id;
-      console.log('Transaction saved to Firebase');
-    } catch (firebaseError) {
-      console.log('Firebase not available, using memory storage');
-      // Fallback to memory storage
-      memoryStorage.transactions.push(transaction);
-    }
+    const userData = getUserData(req.session.id);
+    userData.transactions.push(transaction);
 
-    // Recalculate monthly aggregates
-    await calculateMonthlyAggregates();
+    // Recalculate monthly aggregates for this user
+    await calculateMonthlyAggregates(req.session.id);
 
     res.json({ success: true, transaction });
   } catch (error) {
@@ -194,33 +188,11 @@ app.post('/api/transactions', async (req, res) => {
   }
 });
 
-app.get('/api/transactions', async (req, res) => {
+app.get('/api/transactions', requireAuth, async (req, res) => {
   try {
     const { businessId, startDate, endDate } = req.query;
-    let transactions = [];
-
-    try {
-      // Try to get from Firebase
-      const snapshot = await db.collection('transactions').get();
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        transactions.push({
-          id: doc.id,
-          ...data,
-          date: data.date instanceof admin.firestore.Timestamp ? data.date.toDate().toISOString() : data.date,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt
-        });
-      });
-      console.log(`Loaded ${transactions.length} transactions from Firebase`);
-    } catch (firebaseError) {
-      console.log('Firebase not available, using memory storage');
-      // Fallback to memory storage
-      transactions = memoryStorage.transactions.map(t => ({
-        ...t,
-        date: t.date instanceof Date ? t.date.toISOString() : t.date,
-        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt
-      }));
-    }
+    const userData = getUserData(req.session.id);
+    let transactions = [...userData.transactions];
 
     // Apply filters
     if (businessId) {
@@ -235,35 +207,26 @@ app.get('/api/transactions', async (req, res) => {
       transactions = transactions.filter(t => new Date(t.date) <= new Date(endDate));
     }
 
-    // Sort by date descending
+    // Convert dates to strings and sort by date descending
+    transactions = transactions.map(t => ({
+      ...t,
+      date: t.date instanceof Date ? t.date.toISOString() : t.date,
+      createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt
+    }));
+
     transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.json(transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);
-    res.json([]); // Return empty array instead of error
+    res.json([]);
   }
 });
 
-app.get('/api/monthly-aggregates', async (req, res) => {
+app.get('/api/monthly-aggregates', requireAuth, async (req, res) => {
   try {
-    let aggregates = [];
-
-    try {
-      // Try to get from Firebase
-      const snapshot = await db.collection('monthlyAggregates').get();
-      snapshot.forEach((doc) => {
-        aggregates.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      console.log(`Loaded ${aggregates.length} aggregates from Firebase`);
-    } catch (firebaseError) {
-      console.log('Firebase not available, using memory storage');
-      // Fallback to memory storage
-      aggregates = memoryStorage.monthlyAggregates;
-    }
+    const userData = getUserData(req.session.id);
+    let aggregates = [...userData.monthlyAggregates];
 
     // Sort by year and month
     aggregates.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
@@ -271,13 +234,13 @@ app.get('/api/monthly-aggregates', async (req, res) => {
     res.json(aggregates);
   } catch (error) {
     console.error('Error fetching aggregates:', error);
-    res.json([]); // Return empty array instead of error
+    res.json([]);
   }
 });
 
-app.get('/api/forecast', async (req, res) => {
+app.get('/api/forecast', requireAuth, async (req, res) => {
   try {
-    const forecast = await calculateForecast();
+    const forecast = await calculateForecast(req.session.id);
     res.json(forecast);
   } catch (error) {
     console.error('Error calculating forecast:', error);
@@ -285,29 +248,14 @@ app.get('/api/forecast', async (req, res) => {
   }
 });
 
-// Calculate monthly aggregates
-async function calculateMonthlyAggregates() {
+// Calculate monthly aggregates for specific user
+async function calculateMonthlyAggregates(sessionId) {
   try {
-    let transactions = [];
-
-    try {
-      // Try to get from Firebase
-      const snapshot = await db.collection('transactions').get();
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        transactions.push({
-          id: doc.id,
-          ...data,
-          date: data.date instanceof admin.firestore.Timestamp ? data.date.toDate() : new Date(data.date)
-        });
-      });
-    } catch (firebaseError) {
-      // Fallback to memory storage
-      transactions = memoryStorage.transactions.map(t => ({
-        ...t,
-        date: t.date instanceof Date ? t.date : new Date(t.date)
-      }));
-    }
+    const userData = getUserData(sessionId);
+    const transactions = userData.transactions.map(t => ({
+      ...t,
+      date: t.date instanceof Date ? t.date : new Date(t.date)
+    }));
 
     const aggregates = {};
 
@@ -366,52 +314,20 @@ async function calculateMonthlyAggregates() {
       }
     }
 
-    try {
-      // Try to save to Firebase
-      const batch = db.batch();
-
-      // Clear existing aggregates
-      const existingSnapshot = await db.collection('monthlyAggregates').get();
-      existingSnapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-
-      // Add new aggregates
-      aggregatesList.forEach(agg => {
-        const ref = db.collection('monthlyAggregates').doc();
-        batch.set(ref, agg);
-      });
-
-      await batch.commit();
-      console.log('Monthly aggregates updated in Firebase');
-    } catch (firebaseError) {
-      // Save to memory storage
-      memoryStorage.monthlyAggregates = aggregatesList;
-      console.log('Monthly aggregates updated in memory storage');
-    }
+    // Save to user's private data
+    userData.monthlyAggregates = aggregatesList;
+    console.log('Monthly aggregates updated for user');
 
   } catch (error) {
     console.error('Error calculating monthly aggregates:', error);
   }
 }
 
-// Forecast calculation using average growth
-async function calculateForecast() {
+// Forecast calculation using average growth for specific user
+async function calculateForecast(sessionId) {
   try {
-    let aggregates = [];
-
-    if (isFirebaseReady) {
-      try {
-        const snapshot = await db.collection('monthlyAggregates').get();
-        snapshot.forEach((doc) => {
-          aggregates.push(doc.data());
-        });
-      } catch (firebaseError) {
-        aggregates = memoryStorage.monthlyAggregates || [];
-      }
-    } else {
-      aggregates = memoryStorage.monthlyAggregates || [];
-    }
+    const userData = getUserData(sessionId);
+    let aggregates = userData.monthlyAggregates || [];
 
     aggregates.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
 

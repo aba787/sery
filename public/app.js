@@ -11,52 +11,32 @@ let employees = []; // Track employees
 // Firebase integration status
 let firebaseConnected = false;
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    // Set default date to now
-    document.getElementById('date').value = new Date().toISOString().slice(0, 16);
-
-    // Check for monthly reset
-    checkAndResetMonthlyIncome();
-
-    // Load initial data
-    loadProjects();
-    loadDashboard();
-    loadTransactions();
-    loadCompanyProjects();
-
-    // Set up form submission
-    document.getElementById('transaction-form').addEventListener('submit', handleTransactionSubmit);
-    document.getElementById('project-form').addEventListener('submit', handleProjectSubmit);
-    document.getElementById('employee-form').addEventListener('submit', handleEmployeeSubmit);
-
-    // Toggle fields based on transaction type
-    toggleFields();
-
-    // Add resize handler for responsive updates
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(function() {
-            // Update charts on resize
-            if (document.querySelector('.section.active')) {
-                updateCharts();
-                if (document.getElementById('company-dashboard').classList.contains('active')) {
-                    updateCompanyCharts();
-                }
+// Add resize handler for responsive updates
+let resizeTimeout;
+window.addEventListener('resize', function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(function() {
+        // Update charts on resize
+        if (document.querySelector('.section.active')) {
+            updateCharts();
+            if (document.getElementById('company-dashboard').classList.contains('active')) {
+                updateCompanyCharts();
             }
-        }, 250);
-    });
-
-    // Add touch event handlers for better mobile interaction
-    document.addEventListener('touchstart', function() {}, {passive: true});
+        }
+    }, 250);
 });
+
+// Add touch event handlers for better mobile interaction
+document.addEventListener('touchstart', function() {}, {passive: true});
 
 // Navigation
 function showSection(sectionId) {
+    console.log('Navigating to section:', sectionId);
+    
     // Hide all sections
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
+        section.style.display = 'none';
     });
 
     // Remove active class from all nav buttons
@@ -65,10 +45,21 @@ function showSection(sectionId) {
     });
 
     // Show selected section
-    document.getElementById(sectionId).classList.add('active');
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+        targetSection.style.display = 'block';
+        console.log('Section displayed:', sectionId);
+    } else {
+        console.error('Section not found:', sectionId);
+        return;
+    }
 
-    // Add active class to clicked button
-    event.target.classList.add('active');
+    // Add active class to clicked button - find the button that matches this section
+    const activeBtn = document.querySelector(`button[onclick*="${sectionId}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
 
     // Load section-specific data
     if (sectionId === 'dashboard') {
@@ -77,6 +68,22 @@ function showSection(sectionId) {
         loadTransactions();
     } else if (sectionId === 'employees') {
         loadEmployees();
+    } else if (sectionId === 'company-dashboard') {
+        setTimeout(() => {
+            loadCompanyOverview();
+        }, 100);
+    } else if (sectionId === 'company-finance') {
+        setTimeout(() => {
+            loadCompanyFinance();
+        }, 100);
+    } else if (sectionId === 'company-projects') {
+        setTimeout(() => {
+            loadCompanyProjects();
+        }, 100);
+    } else if (sectionId === 'company') {
+        setTimeout(() => {
+            loadCompanyDashboard();
+        }, 100);
     }
 }
 
@@ -2203,27 +2210,47 @@ function deleteTransaction(id) {
     }
 }
 
-// Define all functions first
-function showSection(sectionName) {
-    const sections = document.querySelectorAll('.section');
-    sections.forEach(section => {
-        section.style.display = 'none';
-    });
-
-    const targetSection = document.getElementById(sectionName);
-    if (targetSection) {
-        targetSection.style.display = 'block';
+// Initialize dashboard on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Show dashboard by default
+    showSection('dashboard');
+    
+    // Set default date to now
+    const dateInput = document.getElementById('date');
+    if (dateInput) {
+        dateInput.value = new Date().toISOString().slice(0, 16);
     }
 
-    // Update active nav
-    const navButtons = document.querySelectorAll('.nav-button');
-    navButtons.forEach(btn => btn.classList.remove('active'));
+    // Check for monthly reset
+    checkAndResetMonthlyIncome();
 
-    const activeButton = document.querySelector(`[onclick="showSection('${sectionName}')"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
+    // Load initial data
+    loadProjects();
+    loadDashboard();
+    loadTransactions();
+    loadCompanyProjects();
+
+    // Set up form submission
+    const transactionForm = document.getElementById('transaction-form');
+    if (transactionForm) {
+        transactionForm.addEventListener('submit', handleTransactionSubmit);
     }
-}
+
+    const projectForm = document.getElementById('project-form');
+    if (projectForm) {
+        projectForm.addEventListener('submit', handleProjectSubmit);
+    }
+
+    const employeeForm = document.getElementById('employee-form');
+    if (employeeForm) {
+        employeeForm.addEventListener('submit', handleEmployeeSubmit);
+    }
+
+    // Toggle fields based on transaction type
+    toggleFields();
+
+    console.log('Application initialized successfully');
+});
 
 function openAddProjectModal() {
     document.getElementById('addProjectModal').style.display = 'block';

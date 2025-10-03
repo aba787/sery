@@ -14,6 +14,34 @@ body {
 }
 
 /* Responsive design */
+@media (max-width: 1200px) {
+    .main-content {
+        padding-right: 280px;
+    }
+    
+    .projects-sidebar {
+        width: 260px;
+    }
+    
+    .kpi-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 992px) {
+    .main-content {
+        padding-right: 240px;
+    }
+    
+    .projects-sidebar {
+        width: 220px;
+    }
+    
+    .charts-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     .app-layout {
         flex-direction: column;
@@ -22,6 +50,7 @@ body {
     .main-content {
         padding: 15px;
         padding-right: 15px;
+        width: 100%;
     }
 
     .projects-sidebar {
@@ -32,12 +61,27 @@ body {
         padding: 15px;
         max-height: 300px;
         overflow-y: auto;
+        box-shadow: none;
+        border-left: none;
+        border-bottom: 1px solid rgba(60, 60, 80, 0.3);
+    }
+
+    header {
+        padding: 20px 15px;
+        margin-bottom: 20px;
+    }
+
+    header h1 {
+        font-size: 1.8em;
+        margin-bottom: 15px;
     }
 
     .nav-btn {
         padding: 12px 20px;
         font-size: 14px;
         margin-bottom: 8px;
+        width: 100%;
+        text-align: center;
     }
 
     .kpi-grid {
@@ -48,6 +92,12 @@ body {
     .charts-grid {
         grid-template-columns: 1fr;
         gap: 20px;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 0;
     }
 }
 
@@ -93,6 +143,8 @@ body::before {
     padding: 20px;
     padding-right: 320px; /* Make space for sidebar */
     max-width: none;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .projects-sidebar {
@@ -108,6 +160,17 @@ body::before {
     overflow-y: auto;
     z-index: 100;
     box-shadow: -5px 0 30px rgba(0, 0, 0, 0.7);
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1400px) {
+    .projects-sidebar {
+        width: 280px;
+    }
+    
+    .main-content {
+        padding-right: 300px;
+    }
 }
 
 /* Message styling */
@@ -437,9 +500,41 @@ nav {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0 10px;
+}
+
+/* Installment form specific styles */
+#installment-group,
+#installment-amount-group,
+#down-payment-group {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+#installment-amount {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    font-weight: 600;
+}
+
+/* Better responsive form layout */
+@media (max-width: 1024px) {
+    .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 900px;
+    }
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        max-width: 100%;
+        gap: 15px;
+    }
 }
 
 .form-group {

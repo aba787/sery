@@ -84,7 +84,7 @@ function showSection(sectionId) {
 async function handleTransactionSubmit(event) {
     event.preventDefault();
 
-    const formData = new FormData(event.target);
+    const paymentMethod = document.getElementById('payment-method').value;
     const transaction = {
         date: document.getElementById('date').value,
         businessId: document.getElementById('business').value,
@@ -95,8 +95,18 @@ async function handleTransactionSubmit(event) {
         students: parseInt(document.getElementById('students').value) || 0,
         clients: parseInt(document.getElementById('clients').value) || 0,
         notes: document.getElementById('notes').value,
-        paymentMethod: document.getElementById('payment-method').value
+        paymentMethod: paymentMethod
     };
+
+    // Add installment data if payment method is installment
+    if (paymentMethod === 'installment') {
+        transaction.installmentData = {
+            totalMonths: parseInt(document.getElementById('installment-months').value) || 1,
+            monthlyAmount: parseFloat(document.getElementById('installment-amount').value) || 0,
+            downPayment: parseFloat(document.getElementById('down-payment').value) || 0,
+            remainingAmount: transaction.amount - (parseFloat(document.getElementById('down-payment').value) || 0)
+        };
+    }
 
     try {
         const response = await fetch('/api/transactions', {
@@ -145,6 +155,40 @@ function toggleFields() {
         document.getElementById('students').value = '';
         document.getElementById('clients').value = '';
         document.getElementById('cost').value = '';
+    }
+}
+
+// Toggle installment payment fields
+function toggleInstallmentFields() {
+    const paymentMethod = document.getElementById('payment-method').value;
+    const installmentGroup = document.getElementById('installment-group');
+    const installmentAmountGroup = document.getElementById('installment-amount-group');
+    const downPaymentGroup = document.getElementById('down-payment-group');
+
+    if (paymentMethod === 'installment') {
+        installmentGroup.style.display = 'flex';
+        installmentAmountGroup.style.display = 'flex';
+        downPaymentGroup.style.display = 'flex';
+    } else {
+        installmentGroup.style.display = 'none';
+        installmentAmountGroup.style.display = 'none';
+        downPaymentGroup.style.display = 'none';
+        document.getElementById('installment-months').value = '';
+        document.getElementById('installment-amount').value = '';
+        document.getElementById('down-payment').value = '';
+    }
+}
+
+// Calculate installment amount
+function calculateInstallmentAmount() {
+    const totalAmount = parseFloat(document.getElementById('amount').value) || 0;
+    const installmentMonths = parseInt(document.getElementById('installment-months').value) || 1;
+    const downPayment = parseFloat(document.getElementById('down-payment').value) || 0;
+    
+    if (totalAmount > 0 && installmentMonths > 0) {
+        const remainingAmount = totalAmount - downPayment;
+        const monthlyInstallment = remainingAmount / installmentMonths;
+        document.getElementById('installment-amount').value = monthlyInstallment.toFixed(2);
     }
 }
 

@@ -4,29 +4,12 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Use Firebase Admin SDK for server-side operations
-const admin = require('firebase-admin');
-
-// Initialize Firebase Admin
-let db;
+// For now, disable Firebase and use local storage only
+// This can be enabled later with proper credentials
+let db = null;
 let isFirebaseReady = false;
 
-try {
-  // Initialize Firebase Admin for server-side operations
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      projectId: "account-3c2d3",
-      // Use default credentials or environment variables in production
-    });
-  }
-  db = admin.firestore();
-  isFirebaseReady = true;
-  console.log('Firebase Admin initialized successfully with project: account-3c2d3');
-} catch (error) {
-  console.error('Firebase Admin initialization error:', error);
-  console.log('Falling back to local storage mode');
-  isFirebaseReady = false;
-}
+console.log('Running in local storage mode - Firebase disabled for this environment');
 
 // Private data storage - each user gets their own isolated storage
 let privateUserData = {};

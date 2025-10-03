@@ -184,12 +184,28 @@
 
                 <div class="form-group">
                     <label for="payment-method">طريقة الدفع:</label>
-                    <select id="payment-method">
+                    <select id="payment-method" onchange="toggleInstallmentFields()">
                         <option value="cash">نقداً</option>
                         <option value="bank">تحويل بنكي</option>
                         <option value="card">بطاقة</option>
                         <option value="online">دفع إلكتروني</option>
+                        <option value="installment">دفع بالتقسيط</option>
                     </select>
+                </div>
+
+                <div class="form-group" id="installment-group" style="display: none;">
+                    <label for="installment-months">عدد الأقساط (شهور):</label>
+                    <input type="number" id="installment-months" min="1" max="60" onchange="calculateInstallmentAmount()">
+                </div>
+
+                <div class="form-group" id="installment-amount-group" style="display: none;">
+                    <label for="installment-amount">مبلغ القسط الشهري:</label>
+                    <input type="number" id="installment-amount" step="0.01" readonly>
+                </div>
+
+                <div class="form-group" id="down-payment-group" style="display: none;">
+                    <label for="down-payment">الدفعة المقدمة:</label>
+                    <input type="number" id="down-payment" step="0.01" onchange="calculateInstallmentAmount()">
                 </div>
 
                 <button type="submit" class="submit-btn">حفظ المعاملة</button>

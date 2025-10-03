@@ -84,31 +84,68 @@ function showSection(sectionId) {
 async function handleTransactionSubmit(event) {
     event.preventDefault();
 
+    // Validate required fields
+    const businessId = document.getElementById('business').value;
+    const type = document.getElementById('type').value;
+    const category = document.getElementById('category').value;
+    const amount = document.getElementById('amount').value;
+
+    if (!businessId) {
+        showMessage('يرجى اختيار العمل/البراند', 'error');
+        return;
+    }
+
+    if (!type) {
+        showMessage('يرجى اختيار نوع المعاملة', 'error');
+        return;
+    }
+
+    if (!category) {
+        showMessage('يرجى اختيار الفئة', 'error');
+        return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+        showMessage('يرجى إدخال مبلغ صحيح', 'error');
+        return;
+    }
+
     const paymentMethod = document.getElementById('payment-method').value;
     const transaction = {
         date: document.getElementById('date').value,
-        businessId: document.getElementById('business').value,
-        type: document.getElementById('type').value,
-        category: document.getElementById('category').value,
-        amount: parseFloat(document.getElementById('amount').value),
+        businessId: businessId,
+        type: type,
+        category: category,
+        amount: parseFloat(amount),
         cost: parseFloat(document.getElementById('cost').value) || 0,
         students: parseInt(document.getElementById('students').value) || 0,
         clients: parseInt(document.getElementById('clients').value) || 0,
-        notes: document.getElementById('notes').value,
+        notes: document.getElementById('notes').value.trim(),
         paymentMethod: paymentMethod
     };
 
     // Add installment data if payment method is installment
     if (paymentMethod === 'installment') {
+        const installmentMonths = parseInt(document.getElementById('installment-months').value) || 1;
+        const downPayment = parseFloat(document.getElementById('down-payment').value) || 0;
+        
         transaction.installmentData = {
-            totalMonths: parseInt(document.getElementById('installment-months').value) || 1,
+            totalMonths: installmentMonths,
             monthlyAmount: parseFloat(document.getElementById('installment-amount').value) || 0,
-            downPayment: parseFloat(document.getElementById('down-payment').value) || 0,
-            remainingAmount: transaction.amount - (parseFloat(document.getElementById('down-payment').value) || 0)
+            downPayment: downPayment,
+            remainingAmount: transaction.amount - downPayment
         };
     }
 
+    // Show loading state
+    const submitButton = event.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    submitButton.textContent = 'جاري الحفظ...';
+    submitButton.disabled = true;
+
     try {
+        console.log('Sending transaction:', transaction);
+
         const response = await fetch('/api/transactions', {
             method: 'POST',
             headers: {
@@ -117,23 +154,36 @@ async function handleTransactionSubmit(event) {
             body: JSON.stringify(transaction)
         });
 
-        if (response.ok) {
-            const result = await response.json();
-            showMessage('تم حفظ المعاملة بنجاح في قاعدة البيانات!', 'success');
+        const result = await response.json();
+        console.log('Server response:', result);
+
+        if (response.ok && result.success) {
+            showMessage('تم حفظ المعاملة بنجاح!', 'success');
+            
+            // Reset form
             event.target.reset();
             document.getElementById('date').value = new Date().toISOString().slice(0, 16);
+            
+            // Hide conditional fields
+            toggleFields();
+            toggleInstallmentFields();
 
-            // Reload data with a slight delay to allow Firebase to process
+            // Reload data
             setTimeout(() => {
                 loadDashboard();
                 loadTransactions();
-            }, 1000);
+            }, 500);
         } else {
-            throw new Error('فشل في حفظ المعاملة في قاعدة البيانات');
+            const errorMessage = result.error || 'فشل في حفظ المعاملة';
+            throw new Error(errorMessage);
         }
     } catch (error) {
-        showMessage('حدث خطأ في حفظ المعاملة: ' + error.message, 'error');
         console.error('Transaction save error:', error);
+        showMessage('حدث خطأ في حفظ المعاملة: ' + error.message, 'error');
+    } finally {
+        // Restore button state
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
     }
 }
 
@@ -585,9 +635,20 @@ function updateBusinessOptions() {
             select.appendChild(option);
         });
 
+        // If no projects exist and this is the main business select, add a default option
+        if (projects.length === 0 && select.id === 'business') {
+            const defaultOption = document.createElement('option');
+            defaultOption.value = 'default_business';
+            defaultOption.textContent = 'العمل الافتراضي';
+            select.appendChild(defaultOption);
+        }
+
         // Restore value if it still exists
         if (currentValue && projects.some(p => p.id === currentValue)) {
             select.value = currentValue;
+        } else if (projects.length === 0 && select.id === 'business') {
+            // Select default business if no projects exist
+            select.value = 'default_business';
         }
     });
 }

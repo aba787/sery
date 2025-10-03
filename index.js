@@ -185,28 +185,86 @@ app.delete('/api/employees/:id', requireAuth, async (req, res) => {
 app.post('/api/transactions', requireAuth, async (req, res) => {
   try {
     const transaction = req.body;
-    transaction.createdAt = new Date();
-    transaction.date = new Date(transaction.date);
-    transaction.id = Date.now().toString();
-    transaction.userId = req.session.userId;
-
-    // Save to Firestore if available
-    if (isFirebaseReady && db) {
-      await db.collection('transactions').add(transaction);
-      console.log('Transaction saved to Firestore');
+    
+    // Validate required fields
+    if (!transaction.businessId || !transaction.type || !transaction.category || !transaction.amount) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'البيانات المطلوبة مفقودة (العمل، النوع، الفئة، المبلغ)' 
+      });
     }
 
-    // Also save to local session data as backup
+    // Ensure amount is a valid number
+    transaction.amount = parseFloat(transaction.amount);
+    if (isNaN(transaction.amount) || transaction.amount <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'المبلغ يجب أن يكون رقماً صحيحاً أكبر من صفر' 
+      });
+    }
+
+    // Add metadata
+    transaction.createdAt = new Date();
+    transaction.date = new Date(transaction.date);
+    transaction.id = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+    transaction.userId = req.session.userId;
+
+    console.log('Processing transaction:', {
+      id: transaction.id,
+      businessId: transaction.businessId,
+      type: transaction.type,
+      amount: transaction.amount
+    });
+
+    // Save to Firestore if available
+    let firestoreSuccess = false;
+    if (isFirebaseReady && db) {
+      try {
+        await db.collection('transactions').add(transaction);
+        console.log('Transaction saved to Firestore successfully');
+        firestoreSuccess = true;
+      } catch (firestoreError) {
+        console.error('Firestore save error:', firestoreError);
+        // Don't fail the request, we'll save locally
+      }
+    }
+
+    // Save to local session data
     const userData = getUserData(req.session.id);
-    userData.transactions.push(transaction);
+    userData.transactions.push({
+      ...transaction,
+      date: transaction.date.toISOString(),
+      createdAt: transaction.createdAt.toISOString()
+    });
+
+    console.log(`Transaction saved locally. Total transactions: ${userData.transactions.length}`);
 
     // Recalculate monthly aggregates for this user
-    await calculateMonthlyAggregates(req.session.id);
+    try {
+      await calculateMonthlyAggregates(req.session.id);
+      console.log('Monthly aggregates recalculated');
+    } catch (aggregateError) {
+      console.error('Error calculating aggregates:', aggregateError);
+      // Don't fail the request for this
+    }
 
-    res.json({ success: true, transaction, firebaseSync: isFirebaseReady });
+    res.json({ 
+      success: true, 
+      transaction: {
+        ...transaction,
+        date: transaction.date.toISOString(),
+        createdAt: transaction.createdAt.toISOString()
+      }, 
+      firebaseSync: firestoreSuccess,
+      message: 'تم حفظ المعاملة بنجاح'
+    });
+
   } catch (error) {
     console.error('Error adding transaction:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      error: 'خطأ في الخادم: ' + error.message 
+    });
   }
 });
 

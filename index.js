@@ -12,19 +12,19 @@ let db;
 let isFirebaseReady = false;
 
 try {
-  // For development, we'll use a service account key (you should add this to secrets)
-  // For now, we'll initialize without credentials for testing
+  // Initialize Firebase Admin for server-side operations
   if (!admin.apps.length) {
     admin.initializeApp({
       projectId: "account-3c2d3",
-      // Add your service account key here in production
+      // Use default credentials or environment variables in production
     });
   }
   db = admin.firestore();
   isFirebaseReady = true;
-  console.log('Firebase Admin initialized successfully');
+  console.log('Firebase Admin initialized successfully with project: account-3c2d3');
 } catch (error) {
   console.error('Firebase Admin initialization error:', error);
+  console.log('Falling back to local storage mode');
   isFirebaseReady = false;
 }
 
@@ -116,11 +116,19 @@ app.post('/api/employees', requireAuth, async (req, res) => {
     const employee = req.body;
     employee.createdAt = new Date();
     employee.id = Date.now().toString();
+    employee.userId = req.session.userId;
 
+    // Save to Firestore if available
+    if (isFirebaseReady && db) {
+      await db.collection('employees').add(employee);
+      console.log('Employee saved to Firestore');
+    }
+
+    // Also save to local session data as backup
     const userData = getUserData(req.session.id);
     userData.employees.push(employee);
 
-    res.json({ success: true, employee });
+    res.json({ success: true, employee, firebaseSync: isFirebaseReady });
   } catch (error) {
     console.error('Error adding employee:', error);
     res.status(500).json({ error: error.message });
@@ -129,8 +137,29 @@ app.post('/api/employees', requireAuth, async (req, res) => {
 
 app.get('/api/employees', requireAuth, async (req, res) => {
   try {
-    const userData = getUserData(req.session.id);
-    res.json(userData.employees);
+    let employees = [];
+
+    // Try to fetch from Firestore first
+    if (isFirebaseReady && db) {
+      try {
+        const snapshot = await db.collection('employees')
+          .where('userId', '==', req.session.userId)
+          .get();
+        employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`Fetched ${employees.length} employees from Firestore`);
+      } catch (firestoreError) {
+        console.error('Error fetching employees from Firestore:', firestoreError);
+        // Fall back to local data
+        const userData = getUserData(req.session.id);
+        employees = userData.employees;
+      }
+    } else {
+      // Use local session data
+      const userData = getUserData(req.session.id);
+      employees = userData.employees;
+    }
+
+    res.json(employees);
   } catch (error) {
     console.error('Error fetching employees:', error);
     res.json([]);
@@ -176,14 +205,22 @@ app.post('/api/transactions', requireAuth, async (req, res) => {
     transaction.createdAt = new Date();
     transaction.date = new Date(transaction.date);
     transaction.id = Date.now().toString();
+    transaction.userId = req.session.userId;
 
+    // Save to Firestore if available
+    if (isFirebaseReady && db) {
+      await db.collection('transactions').add(transaction);
+      console.log('Transaction saved to Firestore');
+    }
+
+    // Also save to local session data as backup
     const userData = getUserData(req.session.id);
     userData.transactions.push(transaction);
 
     // Recalculate monthly aggregates for this user
     await calculateMonthlyAggregates(req.session.id);
 
-    res.json({ success: true, transaction });
+    res.json({ success: true, transaction, firebaseSync: isFirebaseReady });
   } catch (error) {
     console.error('Error adding transaction:', error);
     res.status(500).json({ error: error.message });
@@ -193,11 +230,34 @@ app.post('/api/transactions', requireAuth, async (req, res) => {
 app.get('/api/transactions', requireAuth, async (req, res) => {
   try {
     const { businessId, startDate, endDate } = req.query;
-    const userData = getUserData(req.session.id);
-    let transactions = [...userData.transactions];
+    let transactions = [];
 
-    // Apply filters
-    if (businessId) {
+    // Try to fetch from Firestore first
+    if (isFirebaseReady && db) {
+      try {
+        let query = db.collection('transactions').where('userId', '==', req.session.userId);
+        
+        if (businessId) {
+          query = query.where('businessId', '==', businessId);
+        }
+
+        const snapshot = await query.get();
+        transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`Fetched ${transactions.length} transactions from Firestore`);
+      } catch (firestoreError) {
+        console.error('Error fetching from Firestore:', firestoreError);
+        // Fall back to local data
+        const userData = getUserData(req.session.id);
+        transactions = [...userData.transactions];
+      }
+    } else {
+      // Use local session data
+      const userData = getUserData(req.session.id);
+      transactions = [...userData.transactions];
+    }
+
+    // Apply additional filters
+    if (businessId && !isFirebaseReady) {
       transactions = transactions.filter(t => t.businessId === businessId);
     }
 

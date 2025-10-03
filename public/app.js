@@ -822,13 +822,13 @@ function getResponsiveChartOptions(baseOptions = {}) {
     };
 }
 
-// Revenue and profit chart
+// Revenue and profit data table
 function updateRevenueChart() {
-    const ctx = document.getElementById('revenueChart').getContext('2d');
-
-    // Destroy existing chart if it exists
-    if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
-        window.revenueChart.destroy();
+    const tableBody = document.getElementById('revenueTableBody');
+    
+    if (!tableBody) {
+        console.error('Revenue table body not found');
+        return;
     }
 
     // Filter data by selected project if any
@@ -854,54 +854,40 @@ function updateRevenueChart() {
         chartData = Object.values(monthlyTotals).sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
     }
 
-    const labels = chartData.map(agg => `${agg.year}/${agg.month}`);
-    const revenueData = chartData.map(agg => agg.total_revenue);
-    const profitData = chartData.map(agg => agg.net_profit);
+    // Clear existing table content
+    tableBody.innerHTML = '';
 
-    window.revenueChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'الإيرادات',
-                data: revenueData,
-                borderColor: '#4CAF50',
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: isMobile() ? 2 : 3
-            }, {
-                label: 'صافي الربح',
-                data: profitData,
-                borderColor: '#2196F3',
-                backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: isMobile() ? 2 : 3
-            }]
-        },
-        options: getResponsiveChartOptions({
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return formatCurrency(value);
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
-                        }
-                    }
-                }
-            }
-        })
+    if (chartData.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="3">لا توجد بيانات</td></tr>';
+        return;
+    }
+
+    // Populate table with data
+    chartData.forEach(agg => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${agg.year}/${agg.month.toString().padStart(2, '0')}</td>
+            <td>${formatCurrency(agg.total_revenue)}</td>
+            <td>${formatCurrency(agg.net_profit)}</td>
+        `;
+        tableBody.appendChild(row);
     });
+
+    // Add totals row if multiple entries
+    if (chartData.length > 1) {
+        const totalRevenue = chartData.reduce((sum, agg) => sum + agg.total_revenue, 0);
+        const totalProfit = chartData.reduce((sum, agg) => sum + agg.net_profit, 0);
+        
+        const totalRow = document.createElement('tr');
+        totalRow.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+        totalRow.style.fontWeight = '600';
+        totalRow.innerHTML = `
+            <td>الإجمالي</td>
+            <td>${formatCurrency(totalRevenue)}</td>
+            <td>${formatCurrency(totalProfit)}</td>
+        `;
+        tableBody.appendChild(totalRow);
+    }
 }
 
 // Business distribution chart

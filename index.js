@@ -9,10 +9,58 @@ const PORT = process.env.PORT || 5000;
 let db = null;
 let isFirebaseReady = false;
 
+const fs = require('fs');
+const path = require('path');
+
 console.log('Running in local storage mode - Firebase disabled for this environment');
+
+// Data storage directory
+const DATA_DIR = path.join(__dirname, 'user_data');
+const DATA_FILE = path.join(DATA_DIR, 'business_data.json');
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
 // Private data storage - each user gets their own isolated storage
 let privateUserData = {};
+
+// Load data from file on startup
+function loadDataFromFile() {
+    try {
+        if (fs.existsSync(DATA_FILE)) {
+            const data = fs.readFileSync(DATA_FILE, 'utf8');
+            if (data.trim()) {
+                privateUserData = JSON.parse(data);
+                console.log('Data loaded from persistent storage');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading data from file:', error);
+        privateUserData = {};
+    }
+}
+
+// Save data to file
+function saveDataToFile() {
+    try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify(privateUserData, null, 2), 'utf8');
+        console.log('Data saved to persistent storage');
+    } catch (error) {
+        console.error('Error saving data to file:', error);
+    }
+}
+
+// Auto-save every 30 seconds
+setInterval(() => {
+    if (Object.keys(privateUserData).length > 0) {
+        saveDataToFile();
+    }
+}, 30000);
+
+// Load existing data on startup
+loadDataFromFile();
 
 // Authentication configuration
 const MASTER_PASSWORD = 'sa'; // Your private password
@@ -49,6 +97,8 @@ function getUserData(sessionId) {
       monthlyAggregates: [],
       projects: []
     };
+    // Save immediately when new user data is created
+    saveDataToFile();
   }
   return privateUserData[sessionId];
 }
@@ -111,6 +161,9 @@ app.post('/api/employees', requireAuth, async (req, res) => {
     const userData = getUserData(req.session.id);
     userData.employees.push(employee);
 
+    // Save to persistent storage
+    saveDataToFile();
+
     res.json({ success: true, employee, firebaseSync: isFirebaseReady });
   } catch (error) {
     console.error('Error adding employee:', error);
@@ -158,6 +211,8 @@ app.put('/api/employees/:id', requireAuth, async (req, res) => {
     const index = userData.employees.findIndex(emp => emp.id === id);
     if (index !== -1) {
       userData.employees[index] = { ...userData.employees[index], ...updates };
+      // Save to persistent storage
+      saveDataToFile();
     }
 
     res.json({ success: true });
@@ -173,6 +228,9 @@ app.delete('/api/employees/:id', requireAuth, async (req, res) => {
     const userData = getUserData(req.session.id);
     
     userData.employees = userData.employees.filter(emp => emp.id !== id);
+    
+    // Save to persistent storage
+    saveDataToFile();
 
     res.json({ success: true });
   } catch (error) {
@@ -239,10 +297,15 @@ app.post('/api/transactions', requireAuth, async (req, res) => {
 
     console.log(`Transaction saved locally. Total transactions: ${userData.transactions.length}`);
 
+    // Save to persistent storage immediately
+    saveDataToFile();
+
     // Recalculate monthly aggregates for this user
     try {
       await calculateMonthlyAggregates(req.session.id);
       console.log('Monthly aggregates recalculated');
+      // Save again after aggregates are calculated
+      saveDataToFile();
     } catch (aggregateError) {
       console.error('Error calculating aggregates:', aggregateError);
       // Don't fail the request for this
@@ -477,5 +540,20 @@ async function calculateForecast(sessionId) {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Business Analytics Server running on port ${PORT}`);
   console.log(`Access your dashboard at http://0.0.0.0:${PORT}`);
-  console.log('Firebase integration active - data will be stored in Firestore');
+  console.log('Persistent file storage active - data will be saved automatically');
+});
+
+// Graceful shutdown - save data before exit
+process.on('SIGINT', () => {
+  console.log('Shutting down gracefully...');
+  saveDataToFile();
+  console.log('Data saved. Server shutting down.');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('Shutting down gracefully...');
+  saveDataToFile();
+  console.log('Data saved. Server shutting down.');
+  process.exit(0);
 });

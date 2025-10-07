@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -8,9 +9,6 @@ const PORT = process.env.PORT || 5000;
 // This can be enabled later with proper credentials
 let db = null;
 let isFirebaseReady = false;
-
-const fs = require('fs');
-const path = require('path');
 
 console.log('Running in local storage mode - Firebase disabled for this environment');
 

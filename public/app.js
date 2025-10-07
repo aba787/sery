@@ -33,6 +33,9 @@ document.addEventListener('touchstart', function() {}, {passive: true});
 function showSection(sectionId) {
     console.log('Navigating to section:', sectionId);
     
+    // Save current form data before switching sections
+    saveCurrentFormData();
+    
     // Hide all sections
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
@@ -61,30 +64,30 @@ function showSection(sectionId) {
         activeBtn.classList.add('active');
     }
 
-    // Load section-specific data
-    if (sectionId === 'dashboard') {
-        loadDashboard();
-    } else if (sectionId === 'transactions') {
-        loadTransactions();
-    } else if (sectionId === 'employees') {
-        loadEmployees();
-    } else if (sectionId === 'company-dashboard') {
-        setTimeout(() => {
+    // Load section-specific data and restore form data
+    setTimeout(() => {
+        if (sectionId === 'dashboard') {
+            loadDashboard();
+        } else if (sectionId === 'add-transaction') {
+            restoreFormData('transaction-form');
+        } else if (sectionId === 'transactions') {
+            loadTransactions();
+        } else if (sectionId === 'employees') {
+            loadEmployees();
+            restoreFormData('employee-form');
+        } else if (sectionId === 'company-dashboard') {
             loadCompanyOverview();
-        }, 100);
-    } else if (sectionId === 'company-finance') {
-        setTimeout(() => {
+        } else if (sectionId === 'company-finance') {
             loadCompanyFinance();
-        }, 100);
-    } else if (sectionId === 'company-projects') {
-        setTimeout(() => {
+        } else if (sectionId === 'company-projects') {
             loadCompanyProjects();
-        }, 100);
-    } else if (sectionId === 'company') {
-        setTimeout(() => {
+        } else if (sectionId === 'company') {
             loadCompanyDashboard();
-        }, 100);
-    }
+        } else if (sectionId === 'reports') {
+            // Restore report filters
+            restoreReportFilters();
+        }
+    }, 50);
 }
 
 // Handle transaction form submission
@@ -166,6 +169,9 @@ async function handleTransactionSubmit(event) {
 
         if (response.ok && result.success) {
             showMessage('تم حفظ المعاملة بنجاح!', 'success');
+            
+            // Clear saved form data since transaction was successful
+            localStorage.removeItem('transactionFormData');
             
             // Reset form
             event.target.reset();
@@ -1345,6 +1351,10 @@ async function handleEmployeeSubmit(event) {
 
         if (response.ok) {
             showMessage('تم إضافة الموظفة بنجاح!', 'success');
+            
+            // Clear saved form data since employee was added successfully
+            localStorage.removeItem('employeeFormData');
+            
             event.target.reset();
             loadEmployees();
         } else {
@@ -2196,6 +2206,150 @@ function deleteTransaction(id) {
     }
 }
 
+// Form data persistence functions
+function saveCurrentFormData() {
+    // Save transaction form data
+    const transactionForm = document.getElementById('transaction-form');
+    if (transactionForm && document.getElementById('add-transaction').classList.contains('active')) {
+        const formData = new FormData(transactionForm);
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+            data[key] = value;
+        }
+        // Also save non-form field values
+        data.date = document.getElementById('date')?.value || '';
+        data.business = document.getElementById('business')?.value || '';
+        data.type = document.getElementById('type')?.value || '';
+        data.category = document.getElementById('category')?.value || '';
+        data.amount = document.getElementById('amount')?.value || '';
+        data.cost = document.getElementById('cost')?.value || '';
+        data.students = document.getElementById('students')?.value || '';
+        data.clients = document.getElementById('clients')?.value || '';
+        data.notes = document.getElementById('notes')?.value || '';
+        data.paymentMethod = document.getElementById('payment-method')?.value || '';
+        data.installmentMonths = document.getElementById('installment-months')?.value || '';
+        data.installmentAmount = document.getElementById('installment-amount')?.value || '';
+        data.downPayment = document.getElementById('down-payment')?.value || '';
+        
+        localStorage.setItem('transactionFormData', JSON.stringify(data));
+        console.log('Transaction form data saved');
+    }
+
+    // Save employee form data
+    const employeeForm = document.getElementById('employee-form');
+    if (employeeForm && document.getElementById('employees').classList.contains('active')) {
+        const formData = new FormData(employeeForm);
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+            data[key] = value;
+        }
+        localStorage.setItem('employeeFormData', JSON.stringify(data));
+        console.log('Employee form data saved');
+    }
+
+    // Save current filters and selections
+    const filterData = {
+        filterStart: document.getElementById('filter-start')?.value || '',
+        filterEnd: document.getElementById('filter-end')?.value || '',
+        filterBusiness: document.getElementById('filter-business')?.value || '',
+        filterType: document.getElementById('filter-type')?.value || '',
+        reportPeriod: document.getElementById('report-period')?.value || '',
+        reportBusiness: document.getElementById('report-business')?.value || ''
+    };
+    localStorage.setItem('filtersData', JSON.stringify(filterData));
+}
+
+function restoreFormData(formId) {
+    if (formId === 'transaction-form') {
+        const savedData = localStorage.getItem('transactionFormData');
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                console.log('Restoring transaction form data:', data);
+                
+                // Set form field values
+                if (data.date) document.getElementById('date').value = data.date;
+                if (data.business) document.getElementById('business').value = data.business;
+                if (data.type) {
+                    document.getElementById('type').value = data.type;
+                    toggleFields(); // Update conditional fields
+                }
+                if (data.category) document.getElementById('category').value = data.category;
+                if (data.amount) document.getElementById('amount').value = data.amount;
+                if (data.cost) document.getElementById('cost').value = data.cost;
+                if (data.students) document.getElementById('students').value = data.students;
+                if (data.clients) document.getElementById('clients').value = data.clients;
+                if (data.notes) document.getElementById('notes').value = data.notes;
+                if (data.paymentMethod) {
+                    document.getElementById('payment-method').value = data.paymentMethod;
+                    toggleInstallmentFields(); // Update installment fields
+                }
+                if (data.installmentMonths) document.getElementById('installment-months').value = data.installmentMonths;
+                if (data.installmentAmount) document.getElementById('installment-amount').value = data.installmentAmount;
+                if (data.downPayment) document.getElementById('down-payment').value = data.downPayment;
+                
+            } catch (error) {
+                console.error('Error restoring transaction form data:', error);
+            }
+        }
+    } else if (formId === 'employee-form') {
+        const savedData = localStorage.getItem('employeeFormData');
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                console.log('Restoring employee form data:', data);
+                
+                // Set form field values
+                Object.keys(data).forEach(key => {
+                    const input = document.querySelector(`[name="${key}"]`);
+                    if (input) {
+                        input.value = data[key];
+                    }
+                });
+            } catch (error) {
+                console.error('Error restoring employee form data:', error);
+            }
+        }
+    }
+}
+
+function restoreReportFilters() {
+    const savedFilters = localStorage.getItem('filtersData');
+    if (savedFilters) {
+        try {
+            const filters = JSON.parse(savedFilters);
+            console.log('Restoring filters:', filters);
+            
+            if (filters.filterStart && document.getElementById('filter-start')) {
+                document.getElementById('filter-start').value = filters.filterStart;
+            }
+            if (filters.filterEnd && document.getElementById('filter-end')) {
+                document.getElementById('filter-end').value = filters.filterEnd;
+            }
+            if (filters.filterBusiness && document.getElementById('filter-business')) {
+                document.getElementById('filter-business').value = filters.filterBusiness;
+            }
+            if (filters.filterType && document.getElementById('filter-type')) {
+                document.getElementById('filter-type').value = filters.filterType;
+            }
+            if (filters.reportPeriod && document.getElementById('report-period')) {
+                document.getElementById('report-period').value = filters.reportPeriod;
+            }
+            if (filters.reportBusiness && document.getElementById('report-business')) {
+                document.getElementById('report-business').value = filters.reportBusiness;
+            }
+        } catch (error) {
+            console.error('Error restoring filters:', error);
+        }
+    }
+}
+
+function clearSavedFormData() {
+    localStorage.removeItem('transactionFormData');
+    localStorage.removeItem('employeeFormData');
+    console.log('Saved form data cleared');
+}
+
 // Initialize dashboard on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Show dashboard by default
@@ -2214,7 +2368,15 @@ document.addEventListener('DOMContentLoaded', function() {
     loadProjects();
     loadDashboard();
     loadTransactions();
+    loadEmployees();
     loadCompanyProjects();
+    
+    // Restore any saved form data
+    setTimeout(() => {
+        restoreFormData('transaction-form');
+        restoreFormData('employee-form');
+        restoreReportFilters();
+    }, 100);
 
     // Set up form submission
     const transactionForm = document.getElementById('transaction-form');

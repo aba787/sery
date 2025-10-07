@@ -32,10 +32,10 @@ document.addEventListener('touchstart', function() {}, {passive: true});
 // Navigation
 function showSection(sectionId) {
     console.log('Navigating to section:', sectionId);
-    
+
     // Save current form data before switching sections
     saveCurrentFormData();
-    
+
     // Hide all sections
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
@@ -138,7 +138,7 @@ async function handleTransactionSubmit(event) {
     if (paymentMethod === 'installment') {
         const installmentMonths = parseInt(document.getElementById('installment-months').value) || 1;
         const downPayment = parseFloat(document.getElementById('down-payment').value) || 0;
-        
+
         transaction.installmentData = {
             totalMonths: installmentMonths,
             monthlyAmount: parseFloat(document.getElementById('installment-amount').value) || 0,
@@ -169,14 +169,14 @@ async function handleTransactionSubmit(event) {
 
         if (response.ok && result.success) {
             showMessage('تم حفظ المعاملة بنجاح!', 'success');
-            
+
             // Clear saved form data since transaction was successful
             localStorage.removeItem('transactionFormData');
-            
+
             // Reset form
             event.target.reset();
             document.getElementById('date').value = new Date().toISOString().slice(0, 16);
-            
+
             // Hide conditional fields
             toggleFields();
             toggleInstallmentFields();
@@ -247,7 +247,7 @@ function calculateInstallmentAmount() {
     const totalAmount = parseFloat(document.getElementById('amount').value) || 0;
     const installmentMonths = parseInt(document.getElementById('installment-months').value) || 1;
     const downPayment = parseFloat(document.getElementById('down-payment').value) || 0;
-    
+
     if (totalAmount > 0 && installmentMonths > 0) {
         const remainingAmount = totalAmount - downPayment;
         const monthlyInstallment = remainingAmount / installmentMonths;
@@ -608,7 +608,9 @@ async function handleProjectSubmit(event) {
         id: document.getElementById('project-id').value,
         name: document.getElementById('project-name').value,
         description: document.getElementById('project-description').value,
-        color: document.getElementById('project-color').value
+        color: document.getElementById('project-color').value,
+        status: 'active', // Default status
+        progress: 0 // Default progress
     };
 
     // Check if project ID already exists
@@ -713,9 +715,120 @@ function showAllProjects() {
     showMessage('تم عرض جميع المشاريع', 'success');
 }
 
-// Edit project (placeholder)
+// Edit project
 function editProject(projectId) {
-    showMessage('ميزة تعديل المشروع ستكون متاحة قريباً', 'info');
+    const project = projects.find(p => p.id === projectId);
+    if (!project) {
+        showMessage('المشروع غير موجود', 'error');
+        return;
+    }
+
+    const modalHTML = `
+        <div id="editProjectModal" class="modal" style="display: block;">
+            <div class="modal-content">
+                <span class="close" onclick="closeEditProjectModal()">&times;</span>
+                <h2>تعديل المشروع - ${project.name}</h2>
+                <form id="edit-project-form">
+                    <div class="form-group">
+                        <label for="edit-project-name">اسم المشروع:</label>
+                        <input type="text" id="edit-project-name" value="${project.name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-project-description">وصف المشروع:</label>
+                        <textarea id="edit-project-description" rows="3">${project.description || ''}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-project-status">حالة المشروع:</label>
+                        <select id="edit-project-status">
+                            <option value="active" ${project.status === 'active' ? 'selected' : ''}>قيد الإنشاء</option>
+                            <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>مكتمل</option>
+                            <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>متوقف مؤقتاً</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-project-progress">نسبة الإنجاز (%):</label>
+                        <input type="number" id="edit-project-progress" min="0" max="100" value="${project.progress || 0}">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-project-color">لون المشروع:</label>
+                        <select id="edit-project-color">
+                            <option value="#4CAF50" ${project.color === '#4CAF50' ? 'selected' : ''}>أخضر</option>
+                            <option value="#2196F3" ${project.color === '#2196F3' ? 'selected' : ''}>أزرق</option>
+                            <option value="#FF9800" ${project.color === '#FF9800' ? 'selected' : ''}>برتقالي</option>
+                            <option value="#9C27B0" ${project.color === '#9C27B0' ? 'selected' : ''}>بنفسجي</option>
+                            <option value="#F44336" ${project.color === '#F44336' ? 'selected' : ''}>أحمر</option>
+                            <option value="#607D8B" ${project.color === '#607D8B' ? 'selected' : ''}>رمادي</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="edit-auto-complete" ${project.status === 'completed' ? 'checked' : ''}> 
+                            تحديث الحالة تلقائياً عند وصول النسبة إلى 100%
+                        </label>
+                    </div>
+                    <button type="submit" class="submit-btn">حفظ التعديلات</button>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Handle progress input changes
+    const progressInput = document.getElementById('edit-project-progress');
+    const statusSelect = document.getElementById('edit-project-status');
+    const autoCompleteCheckbox = document.getElementById('edit-auto-complete');
+
+    progressInput.addEventListener('input', function() {
+        if (autoCompleteCheckbox.checked && parseInt(this.value) === 100) {
+            statusSelect.value = 'completed';
+        } else if (parseInt(this.value) < 100 && statusSelect.value === 'completed') {
+            statusSelect.value = 'active';
+        }
+    });
+
+    document.getElementById('edit-project-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const updatedProject = {
+            ...project,
+            name: document.getElementById('edit-project-name').value,
+            description: document.getElementById('edit-project-description').value,
+            status: document.getElementById('edit-project-status').value,
+            progress: parseInt(document.getElementById('edit-project-progress').value) || 0,
+            color: document.getElementById('edit-project-color').value,
+            lastModified: new Date().toISOString()
+        };
+
+        // Update project in the array
+        const projectIndex = projects.findIndex(p => p.id === projectId);
+        if (projectIndex !== -1) {
+            projects[projectIndex] = updatedProject;
+            localStorage.setItem('projects', JSON.stringify(projects));
+
+            // Update displays
+            displaySidebarProjects();
+            updateBusinessOptions();
+
+            // Refresh current dashboard if showing this project
+            if (selectedProject === projectId) {
+                loadDashboard();
+            }
+
+            closeEditProjectModal();
+            showMessage(`تم تحديث مشروع "${updatedProject.name}" بنجاح!`, 'success');
+        } else {
+            showMessage('خطأ في العثور على المشروع', 'error');
+        }
+    });
+}
+
+// Close edit project modal
+function closeEditProjectModal() {
+    const modal = document.getElementById('editProjectModal');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 // Delete project
@@ -736,7 +849,7 @@ function deleteProject(projectId) {
         const currentYear = new Date().getFullYear();
         const projectYearlyKey = `${projectId}_${currentYear}`;
         if (yearlyIncomes[projectYearlyKey]) {
-            delete yearlyIncomes[projectYearlyKey];
+            delete yearlyIncomes[projectKey];
             localStorage.setItem('yearlyIncomes', JSON.stringify(yearlyIncomes));
         }
 
@@ -831,7 +944,7 @@ function getResponsiveChartOptions(baseOptions = {}) {
 // Revenue and profit data table
 function updateRevenueChart() {
     const tableBody = document.getElementById('revenueTableBody');
-    
+
     if (!tableBody) {
         console.error('Revenue table body not found');
         return;
@@ -883,7 +996,7 @@ function updateRevenueChart() {
     if (chartData.length > 1) {
         const totalRevenue = chartData.reduce((sum, agg) => sum + agg.total_revenue, 0);
         const totalProfit = chartData.reduce((sum, agg) => sum + agg.net_profit, 0);
-        
+
         const totalRow = document.createElement('tr');
         totalRow.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
         totalRow.style.fontWeight = '600';
@@ -1351,10 +1464,10 @@ async function handleEmployeeSubmit(event) {
 
         if (response.ok) {
             showMessage('تم إضافة الموظفة بنجاح!', 'success');
-            
+
             // Clear saved form data since employee was added successfully
             localStorage.removeItem('employeeFormData');
-            
+
             event.target.reset();
             loadEmployees();
         } else {
@@ -2230,7 +2343,7 @@ function saveCurrentFormData() {
         data.installmentMonths = document.getElementById('installment-months')?.value || '';
         data.installmentAmount = document.getElementById('installment-amount')?.value || '';
         data.downPayment = document.getElementById('down-payment')?.value || '';
-        
+
         localStorage.setItem('transactionFormData', JSON.stringify(data));
         console.log('Transaction form data saved');
     }
@@ -2266,7 +2379,7 @@ function restoreFormData(formId) {
             try {
                 const data = JSON.parse(savedData);
                 console.log('Restoring transaction form data:', data);
-                
+
                 // Set form field values
                 if (data.date) document.getElementById('date').value = data.date;
                 if (data.business) document.getElementById('business').value = data.business;
@@ -2287,7 +2400,7 @@ function restoreFormData(formId) {
                 if (data.installmentMonths) document.getElementById('installment-months').value = data.installmentMonths;
                 if (data.installmentAmount) document.getElementById('installment-amount').value = data.installmentAmount;
                 if (data.downPayment) document.getElementById('down-payment').value = data.downPayment;
-                
+
             } catch (error) {
                 console.error('Error restoring transaction form data:', error);
             }
@@ -2298,7 +2411,7 @@ function restoreFormData(formId) {
             try {
                 const data = JSON.parse(savedData);
                 console.log('Restoring employee form data:', data);
-                
+
                 // Set form field values
                 Object.keys(data).forEach(key => {
                     const input = document.querySelector(`[name="${key}"]`);
@@ -2319,7 +2432,7 @@ function restoreReportFilters() {
         try {
             const filters = JSON.parse(savedFilters);
             console.log('Restoring filters:', filters);
-            
+
             if (filters.filterStart && document.getElementById('filter-start')) {
                 document.getElementById('filter-start').value = filters.filterStart;
             }
@@ -2354,7 +2467,7 @@ function clearSavedFormData() {
 document.addEventListener('DOMContentLoaded', function() {
     // Show dashboard by default
     showSection('dashboard');
-    
+
     // Set default date to now
     const dateInput = document.getElementById('date');
     if (dateInput) {
@@ -2370,7 +2483,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadTransactions();
     loadEmployees();
     loadCompanyProjects();
-    
+
     // Restore any saved form data
     setTimeout(() => {
         restoreFormData('transaction-form');

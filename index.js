@@ -87,6 +87,268 @@ app.use('/app.js', express.static('public/app.js'));
 app.use('/public', express.static('public'));
 
 // Get user's private data storage
+function getUserData(req) {
+    const sessionId = req.session.id || 'default';
+    if (!privateUserData[sessionId]) {
+        privateUserData[sessionId] = {
+            transactions: [],
+            monthlyAggregates: [],
+            forecast: { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' },
+            employees: [],
+            businesses: []
+        };
+    }
+    return privateUserData[sessionId];
+}
+
+// Routes
+
+// Password verification page
+app.get('/password', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Password.html'));
+});
+
+// Main application - requires authentication
+app.get('/', requireAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Login API
+app.post('/api/login', (req, res) => {
+    const { password } = req.body;
+    
+    if (password === MASTER_PASSWORD) {
+        req.session.authenticated = true;
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({ error: 'Session save failed' });
+            }
+            res.json({ success: true });
+        });
+    } else {
+        res.status(401).json({ error: 'كلمة المرور غير صحيحة' });
+    }
+});
+
+// Logout API
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ error: 'Logout failed' });
+        }
+        res.json({ success: true });
+    });
+});
+
+// Get transactions
+app.get('/api/transactions', requireAuth, (req, res) => {
+    try {
+        const userData = getUserData(req);
+        res.json(userData.transactions || []);
+    } catch (error) {
+        console.error('Error getting transactions:', error);
+        res.status(500).json({ error: 'فشل في تحميل المعاملات' });
+    }
+});
+
+// Add transaction
+app.post('/api/transactions', requireAuth, (req, res) => {
+    try {
+        const userData = getUserData(req);
+        const transaction = {
+            id: Date.now().toString(),
+            ...req.body,
+            timestamp: new Date().toISOString()
+        };
+        
+        if (!userData.transactions) {
+            userData.transactions = [];
+        }
+        
+        userData.transactions.push(transaction);
+        
+        // Update monthly aggregates
+        updateMonthlyAggregates(userData, transaction);
+        
+        // Save to file immediately
+        saveDataToFile();
+        
+        console.log('Transaction saved successfully:', transaction.id);
+        res.json({ success: true, id: transaction.id });
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        res.status(500).json({ error: 'فشل في حفظ المعاملة: ' + error.message });
+    }
+});
+
+// Get monthly aggregates
+app.get('/api/monthly-aggregates', requireAuth, (req, res) => {
+    try {
+        const userData = getUserData(req);
+        res.json(userData.monthlyAggregates || []);
+    } catch (error) {
+        console.error('Error getting aggregates:', error);
+        res.status(500).json({ error: 'فشل في تحميل البيانات المجمعة' });
+    }
+});
+
+// Get forecast
+app.get('/api/forecast', requireAuth, (req, res) => {
+    try {
+        const userData = getUserData(req);
+        res.json(userData.forecast || { forecast_revenue: 0, forecast_profit: 0, confidence: 'low' });
+    } catch (error) {
+        console.error('Error getting forecast:', error);
+        res.status(500).json({ error: 'فشل في تحميل التوقعات' });
+    }
+});
+
+// Employee management
+app.get('/api/employees', requireAuth, (req, res) => {
+    try {
+        const userData = getUserData(req);
+        res.json(userData.employees || []);
+    } catch (error) {
+        console.error('Error getting employees:', error);
+        res.status(500).json({ error: 'فشل في تحميل بيانات الموظفات' });
+    }
+});
+
+app.post('/api/employees', requireAuth, (req, res) => {
+    try {
+        const userData = getUserData(req);
+        const employee = {
+            id: Date.now().toString(),
+            ...req.body,
+            createdAt: new Date().toISOString()
+        };
+        
+        if (!userData.employees) {
+            userData.employees = [];
+        }
+        
+        userData.employees.push(employee);
+        saveDataToFile();
+        
+        console.log('Employee added successfully:', employee.id);
+        res.json({ success: true, id: employee.id });
+    } catch (error) {
+        console.error('Error adding employee:', error);
+        res.status(500).json({ error: 'فشل في إضافة الموظفة: ' + error.message });
+    }
+});
+
+app.delete('/api/employees/:id', requireAuth, (req, res) => {
+    try {
+        const userData = getUserData(req);
+        const employeeId = req.params.id;
+        
+        if (!userData.employees) {
+            return res.status(404).json({ error: 'Employees not found' });
+        }
+        
+        userData.employees = userData.employees.filter(emp => emp.id !== employeeId);
+        saveDataToFile();
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting employee:', error);
+        res.status(500).json({ error: 'فشل في حذف الموظفة: ' + error.message });
+    }
+});
+
+// Update monthly aggregates function
+function updateMonthlyAggregates(userData, transaction) {
+    try {
+        const date = new Date(transaction.date);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        
+        if (!userData.monthlyAggregates) {
+            userData.monthlyAggregates = [];
+        }
+        
+        let aggregate = userData.monthlyAggregates.find(agg => 
+            agg.year === year && 
+            agg.month === month && 
+            agg.businessId === transaction.businessId
+        );
+        
+        if (!aggregate) {
+            aggregate = {
+                year,
+                month,
+                businessId: transaction.businessId,
+                total_revenue: 0,
+                total_expenses: 0,
+                net_profit: 0,
+                students_count: 0,
+                clients_count: 0
+            };
+            userData.monthlyAggregates.push(aggregate);
+        }
+        
+        if (transaction.type === 'revenue') {
+            aggregate.total_revenue += transaction.amount;
+            aggregate.students_count += transaction.students || 0;
+            aggregate.clients_count += transaction.clients || 0;
+        } else if (transaction.type === 'expense') {
+            aggregate.total_expenses += transaction.amount;
+        }
+        
+        aggregate.net_profit = aggregate.total_revenue - aggregate.total_expenses;
+        
+        console.log('Monthly aggregate updated for', year, month, transaction.businessId);
+    } catch (error) {
+        console.error('Error updating monthly aggregates:', error);
+    }
+}
+
+// Redirect root to password page if not authenticated
+app.get('/', (req, res) => {
+    if (req.session && req.session.authenticated) {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } else {
+        res.redirect('/password');
+    }
+});
+
+// 404 handler
+app.use((req, res) => {
+    if (req.session && req.session.authenticated) {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } else {
+        res.redirect('/password');
+    }
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('\nShutting down gracefully...');
+    if (Object.keys(privateUserData).length > 0) {
+        saveDataToFile();
+        console.log('Data saved before shutdown');
+    }
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('\nShutting down gracefully...');
+    if (Object.keys(privateUserData).length > 0) {
+        saveDataToFile();
+        console.log('Data saved before shutdown');
+    }
+    process.exit(0);
+});
+
+// Start server
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`🔒 Authentication enabled with master password`);
+    console.log(`💾 Data persistence enabled - storing in: ${DATA_FILE}`);
+    console.log(`🌟 Your private business analytics system is ready!`);
+});
 function getUserData(sessionId) {
   if (!privateUserData[sessionId]) {
     privateUserData[sessionId] = {

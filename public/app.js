@@ -168,7 +168,7 @@ async function handleTransactionSubmit(event) {
         console.log('Server response:', result);
 
         if (response.ok && result.success) {
-            showMessage('تم حفظ المعاملة بنجاح!', 'success');
+            showMessage('تم حفظ المعاملة بنجاح! ✅', 'success');
 
             // Clear saved form data since transaction was successful
             localStorage.removeItem('transactionFormData');
@@ -181,11 +181,22 @@ async function handleTransactionSubmit(event) {
             toggleFields();
             toggleInstallmentFields();
 
-            // Reload data
+            // Reload data immediately
+            loadDashboard();
+            loadTransactions();
+            
+            // Force immediate backup
             setTimeout(() => {
-                loadDashboard();
-                loadTransactions();
-            }, 500);
+                const backupData = {
+                    transactions: currentTransactions,
+                    employees: employees,
+                    projects: projects,
+                    monthlyAggregates: monthlyAggregates,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('dataBackup', JSON.stringify(backupData));
+                console.log('💾 Immediate backup created after transaction');
+            }, 1000);
         } else {
             const errorMessage = result.error || 'فشل في حفظ المعاملة';
             throw new Error(errorMessage);
@@ -2463,6 +2474,77 @@ function clearSavedFormData() {
     console.log('Saved form data cleared');
 }
 
+// Auto backup data every minute
+setInterval(() => {
+    if (currentTransactions.length > 0 || employees.length > 0 || projects.length > 0) {
+        const backupData = {
+            transactions: currentTransactions,
+            employees: employees,
+            projects: projects,
+            monthlyAggregates: monthlyAggregates,
+            timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('dataBackup', JSON.stringify(backupData));
+        console.log('✅ Data backup saved locally at', new Date().toLocaleString());
+    }
+}, 60000); // Every minute
+
+// Recovery function
+function recoverDataFromBackup() {
+    const backup = localStorage.getItem('dataBackup');
+    if (backup) {
+        try {
+            const data = JSON.parse(backup);
+            if (currentTransactions.length === 0 && data.transactions && data.transactions.length > 0) {
+                console.log('🔄 Attempting to recover transactions from backup...');
+                // Try to restore each transaction
+                data.transactions.forEach(async (transaction, index) => {
+                    setTimeout(async () => {
+                        try {
+                            const response = await fetch('/api/transactions', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(transaction)
+                            });
+                            if (response.ok) {
+                                console.log(`✅ Recovered transaction ${index + 1}/${data.transactions.length}`);
+                            }
+                        } catch (error) {
+                            console.error('Error recovering transaction:', error);
+                        }
+                    }, index * 100); // Stagger requests
+                });
+            }
+            
+            if (employees.length === 0 && data.employees && data.employees.length > 0) {
+                console.log('🔄 Attempting to recover employees from backup...');
+                data.employees.forEach(async (employee, index) => {
+                    setTimeout(async () => {
+                        try {
+                            const response = await fetch('/api/employees', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(employee)
+                            });
+                            if (response.ok) {
+                                console.log(`✅ Recovered employee ${index + 1}/${data.employees.length}`);
+                            }
+                        } catch (error) {
+                            console.error('Error recovering employee:', error);
+                        }
+                    }, index * 100);
+                });
+            }
+        } catch (error) {
+            console.error('Error parsing backup data:', error);
+        }
+    }
+}
+
 // Initialize dashboard on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Show dashboard by default
@@ -2483,6 +2565,11 @@ document.addEventListener('DOMContentLoaded', function() {
     loadTransactions();
     loadEmployees();
     loadCompanyProjects();
+    
+    // Try to recover data if empty
+    setTimeout(() => {
+        recoverDataFromBackup();
+    }, 2000);
 
     // Restore any saved form data
     setTimeout(() => {
